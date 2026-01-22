@@ -1,4 +1,12 @@
-import { S3Client } from "@aws-sdk/client-s3";
+import {
+	DeleteObjectCommand,
+	GetObjectCommand,
+	HeadBucketCommand,
+	HeadObjectCommand,
+	ListObjectsV2Command,
+	PutObjectCommand,
+	S3Client
+} from "@aws-sdk/client-s3";
 import { App } from "obsidian";
 import { RemoteFileSystem, FileInfo, UploadOptions, DownloadOptions, ListOptions, ListResult } from "./fsAbstract";
 import { S3Config } from "types";
@@ -42,13 +50,11 @@ export class S3FileSystem extends RemoteFileSystem {
 	constructor(app: App, config: S3Config) {
 		super(app, 's3');
 		this.config = config;
-		this.client = getS3Client(app, config);
+		this.client = getS3Client(app, this.config);
 		this.bucket = config.bucket;
 	}
 
 	async uploadFile(options: UploadOptions): Promise<void> {
-		const { PutObjectCommand } = await import("@aws-sdk/client-s3");
-
 		// Convert body to appropriate type for S3
 		let body: Uint8Array | string | Blob;
 		if (options.body instanceof ArrayBuffer) {
@@ -71,8 +77,6 @@ export class S3FileSystem extends RemoteFileSystem {
 	}
 
 	async downloadFile(options: DownloadOptions): Promise<ArrayBuffer | Uint8Array | Blob | string> {
-		const { GetObjectCommand } = await import("@aws-sdk/client-s3");
-
 		const command = new GetObjectCommand({
 			Bucket: this.bucket,
 			Key: options.key,
@@ -90,8 +94,6 @@ export class S3FileSystem extends RemoteFileSystem {
 	}
 
 	async deleteFile(key: string): Promise<void> {
-		const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
-
 		const command = new DeleteObjectCommand({
 			Bucket: this.bucket,
 			Key: key,
@@ -101,8 +103,6 @@ export class S3FileSystem extends RemoteFileSystem {
 	}
 
 	async listFiles(options: ListOptions = {}): Promise<ListResult> {
-		const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
-
 		const command = new ListObjectsV2Command({
 			Bucket: this.bucket,
 			Prefix: options.prefix,
@@ -146,8 +146,6 @@ export class S3FileSystem extends RemoteFileSystem {
 	}
 
 	async getFileInfo(key: string): Promise<FileInfo | null> {
-		const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
-
 		try {
 			const command = new HeadObjectCommand({
 				Bucket: this.bucket,
@@ -185,8 +183,6 @@ export class S3FileSystem extends RemoteFileSystem {
 
 	async testConnection(): Promise<boolean> {
 		try {
-			const { HeadBucketCommand } = await import("@aws-sdk/client-s3");
-
 			const command = new HeadBucketCommand({
 				Bucket: this.bucket,
 			});

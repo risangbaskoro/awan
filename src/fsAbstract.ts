@@ -1,6 +1,7 @@
 import { App } from "obsidian";
-import { S3FileSystem } from "./fsS3";
 import type { S3Config, SupportedServiceType, WebDAVConfig } from "types";
+import { S3FileSystem } from "./fsS3";
+import { WebDAVFileSystem } from "./fsWebdav";
 
 export interface FileInfo {
 	key: string;
@@ -75,7 +76,6 @@ export class RemoteFileSystemFactory {
 					throw new Error('WebDAV configuration is required for WebDAV service type');
 				}
 				{
-					const { WebDAVFileSystem } = await import("./fsWebdav");
 					return new WebDAVFileSystem(app, config.webdav);
 				}
 			default:
