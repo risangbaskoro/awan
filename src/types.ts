@@ -1,4 +1,4 @@
-export type ServiceType = 's3' | 'webdav';
+export type SupportedServiceType = 's3' | 'webdav';
 
 export interface S3Config {
 	accessKeyId: string;
@@ -8,7 +8,6 @@ export interface S3Config {
 	bucket: string;
 	forcePathStyle: boolean;
 }
-
 
 export interface WebDAVConfig {
 	url: string;

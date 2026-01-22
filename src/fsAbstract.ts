@@ -1,6 +1,6 @@
 import { App } from "obsidian";
 import { S3FileSystem } from "./fsS3";
-import type { S3Config, ServiceType, WebDAVConfig } from "types";
+import type { S3Config, SupportedServiceType, WebDAVConfig } from "types";
 
 export interface FileInfo {
 	key: string;
@@ -43,9 +43,9 @@ export interface ListResult {
 
 export abstract class RemoteFileSystem {
 	protected app: App;
-	protected serviceType: ServiceType;
+	protected serviceType: SupportedServiceType;
 
-	constructor(app: App, serviceType: ServiceType) {
+	constructor(app: App, serviceType: SupportedServiceType) {
 		this.app = app;
 		this.serviceType = serviceType;
 	}
@@ -57,13 +57,13 @@ export abstract class RemoteFileSystem {
 	abstract getFileInfo(key: string): Promise<FileInfo | null>;
 	abstract testConnection(): Promise<boolean>;
 
-	getServiceType(): ServiceType {
+	getServiceType(): SupportedServiceType {
 		return this.serviceType;
 	}
 }
 
 export class RemoteFileSystemFactory {
-	static async create(app: App, serviceType: ServiceType, config: { s3?: S3Config; webdav?: WebDAVConfig }): Promise<RemoteFileSystem> {
+	static async create(app: App, serviceType: SupportedServiceType, config: { s3?: S3Config; webdav?: WebDAVConfig }): Promise<RemoteFileSystem> {
 		switch (serviceType) {
 			case 's3':
 				if (!config.s3) {

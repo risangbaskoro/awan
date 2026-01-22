@@ -1,13 +1,13 @@
 import { App, IconName, PluginSettingTab, SecretComponent, Setting } from "obsidian";
 import Awan from "./main";
 import { DEFAULT_S3_CONFIG, } from "./fsS3";
-import type { S3Config, ServiceType, WebDAVConfig } from "types";
+import type { S3Config, SupportedServiceType, WebDAVConfig } from "types";
 import { DEFAULT_WEBDAV_CONFIG } from "fsWebdav";
 
 
 export interface GeneralSettings {
 	/** The service type to use */
-	serviceType: ServiceType;
+	serviceType: SupportedServiceType;
 	/** The key to password in Obsidian keychain for encryption. */
 	password: string;
 	/** Whether to enable scheduled sync. */
@@ -66,7 +66,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.addOption('s3', 'Amazon S3 / S3-compatible')
 				.addOption('webdav', 'WebDAV (not yet implemented)')
 				.setValue(this.plugin.settings.serviceType ?? 's3')
-				.onChange(async (value: ServiceType) => {
+				.onChange(async (value: SupportedServiceType) => {
 					this.plugin.settings.serviceType = value;
 					await this.plugin.saveSettings();
 					this.display(); // Refresh the settings display
