@@ -1,23 +1,32 @@
 import { App, IconName, PluginSettingTab, SecretComponent, Setting } from "obsidian";
 import Awan from "./main";
-import { DEFAULT_S3_CONFIG, S3Config } from "./fsS3";
+import { DEFAULT_S3_CONFIG, } from "./fsS3";
+import type { S3Config, ServiceType, WebDAVConfig } from "types";
+import { DEFAULT_WEBDAV_CONFIG } from "fsWebdav";
 
 
 export interface GeneralSettings {
+	/** The service type to use */
+	serviceType: ServiceType;
 	/** The key to password in Obsidian keychain for encryption. */
 	password: string;
+	/** Whether to enable scheduled sync. */
 	autoSync: boolean;
+	/** Sync interval in milliseconds. */
 	syncInterval: number;
 }
 
 export interface AwanSettings extends GeneralSettings {
 	s3: S3Config;
+	webdav: WebDAVConfig;
 }
 
 export const DEFAULT_SETTINGS: Partial<AwanSettings> = {
 	password: '',
 	syncInterval: 5 * 60000,
-	s3: DEFAULT_S3_CONFIG
+	serviceType: 's3',
+	s3: DEFAULT_S3_CONFIG,
+	webdav: DEFAULT_WEBDAV_CONFIG
 }
 
 export class AwanSettingTab extends PluginSettingTab {
@@ -35,7 +44,13 @@ export class AwanSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		this.displayGeneralSettings(containerEl)
-		this.displayS3Settings(containerEl)
+
+		// Only show S3 settings if S3 is selected
+		if (this.plugin.settings.serviceType === 's3') {
+			this.displayS3Settings(containerEl)
+		} else if (this.plugin.settings.serviceType === 'webdav') {
+			this.displayWebDAVSettings(containerEl)
+		}
 	}
 
 	private displayGeneralSettings(containerEl: HTMLElement): void {
@@ -43,6 +58,19 @@ export class AwanSettingTab extends PluginSettingTab {
 			.setHeading()
 			.setName('General')
 			.setDesc('General settings.')
+
+		new Setting(containerEl)
+			.setName('Service type')
+			.setDesc('Choose the cloud storage service to use for syncing.')
+			.addDropdown(dropdown => dropdown
+				.addOption('s3', 'Amazon S3 / S3-compatible')
+				.addOption('webdav', 'WebDAV (not yet implemented)')
+				.setValue(this.plugin.settings.serviceType ?? 's3')
+				.onChange(async (value: ServiceType) => {
+					this.plugin.settings.serviceType = value;
+					await this.plugin.saveSettings();
+					this.display(); // Refresh the settings display
+				}));
 
 		new Setting(containerEl)
 			.setName('Auto sync')
@@ -55,7 +83,7 @@ export class AwanSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Sync interval (minutes)')
-			.setDesc('Sync interval in minutes. Will be ignored if auto sync is disabled.')
+			.setDesc('Scheduled sync interval in minutes. Will be ignored if auto sync is disabled.')
 			.addText(text => text
 				.setValue((this.plugin.settings.syncInterval / 60000).toString())
 				.onChange(async (value: string) => {
@@ -75,7 +103,7 @@ export class AwanSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setHeading()
 			.setName('S3')
-			.setDesc('Setup your S3 storage settings.')
+			.setDesc('Set up your S3 storage settings.')
 
 		new Setting(containerEl)
 			.setName('Access key')
@@ -138,5 +166,50 @@ export class AwanSettingTab extends PluginSettingTab {
 					this.plugin.settings.s3.forcePathStyle = value;
 					await this.plugin.saveSettings();
 				}))
+	}
+
+	/**
+	 * Display WebDAV settings.
+	 *
+	 * @private
+	 */
+	private displayWebDAVSettings(containerEl: HTMLElement): void {
+		new Setting(containerEl)
+			.setHeading()
+			.setName('WebDAV')
+			.setDesc('WebDAV settings')
+
+		new Setting(containerEl)
+			.setName('WebDAV URL')
+			.setDesc('WebDAV server URL (e.g., https://example.com/webdav)')
+			.addText(text => text
+				.setPlaceholder('https://example.com/webdav')
+				.setValue(this.plugin.settings.webdav.url ?? "")
+				.onChange(async (value: string) => {
+					this.plugin.settings.webdav.url = value;
+					await this.plugin.saveSettings();
+				}))
+
+		new Setting(containerEl)
+			.setName('Username')
+			.addText(text => text
+				.setValue(this.plugin.settings.webdav.username ?? "")
+				.onChange(async (value: string) => {
+					this.plugin.settings.webdav.username = value;
+					await this.plugin.saveSettings();
+				}))
+
+		new Setting(containerEl)
+			.setName('Password')
+			.addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
+				.setValue(this.plugin.settings.webdav.password ?? "")
+				.onChange(async (value: string) => {
+					this.plugin.settings.webdav.password = value;
+					await this.plugin.saveSettings();
+				}))
+
+		new Setting(containerEl)
+			.setName('Status')
+			.setDesc('WebDAV support is coming in a future version.')
 	}
 }
