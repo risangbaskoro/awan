@@ -1,0 +1,11 @@
+{
+	"id": "awan",
+	"name": "Awan",
+	"version": "0.1.0",
+	"minAppVersion": "1.11.5",
+	"description": "Another local-cloud sync plugin for Obsidian.",
+	"author": "@risangbaskoro",
+	"authorUrl": "https://x.com/risangbaskoro",
+	"fundingUrl": "https://github.com/sponsors/risangbaskoro",
+	"isDesktopOnly": false
+}
