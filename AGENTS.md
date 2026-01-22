@@ -1,10 +1,27 @@
-# Obsidian community plugin
+# Awan: Another local-cloud sync plugin for Obsidian.
 
 ## Project overview
+
+Awan is Obsidian plugin to sync files between local and S3 compatible bucket. The project aims to be an alternative to [Obsidian Sync](https://obsidian.md/sync).
+
+The goal of this project is to be a plugin that can sync files (including dotfiles) in the Obsidian vault, using user provided S3 compatible credentials. In later development, WebDav also should be supported, but not until the S3 support is robust.
 
 - Target: Obsidian Community Plugin (TypeScript → bundled JavaScript).
 - Entry point: `main.ts` compiled to `main.js` and loaded by Obsidian.
 - Required release artifacts: `main.js`, `manifest.json`, and optional `styles.css`.
+
+## Target features
+
+The expected features for this project including:
+
+- Cloud storage support:
+	- Amazon S3 or S3-compatible (R2, B2, MinIO, etc)
+	- WebDAV
+- **Supports Obsidian Mobile**: Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
+- **End-to-end encryption**: User can pick a password and set that password as the encryption key for the cloud storage. The files should be decrypted locally. The password should be using Obsidian's `SecretStorage`.
+- **Scheduled auto-sync**: The sync feature can be scheduled to run per minute, every file save, or triggered manually using Command, Ribbon, or Status Bar.
+- **Minimal Intrusive**: The plugin must have minimal to no intrusion. It should enable the user's to sync between devices. No need to manually pull and manually push the files.
+- **Skip files and paths**: The plugin must be able to choose which files or paths to ignore by regex expressions.
 
 ## Environment & tooling
 
@@ -39,6 +56,7 @@ npm run build
 - To use eslint to analyze this project use this command: `eslint main.ts`
 - eslint will then create a report with suggestions for code improvement by file and line number.
 - If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder: `eslint ./src/`
+- Alternatively, run `npm run lint` for linting.
 
 ## File & folder conventions
 
@@ -78,6 +96,87 @@ npm run build
 - Keep `minAppVersion` accurate when using newer APIs.
 - Canonical requirements are coded here: https://github.com/obsidianmd/obsidian-releases/blob/master/.github/workflows/validate-plugin-entry.yml
 
+## Sync Strategy
+
+The default sync strategy is to prioritize the latest changes, regardless where the file changes comes from. The local database (whether that's from Obsidian's localstorage, indexedDB, or localforage) is used to track changes within the files.
+
+The user should be able to choose the syncing strategy for the current vault.
+
+For syncing using S3, use the official `aws-sdk` packages, including but not limited to: `client-s3`, `lib-storage`, `signature-v4-crt`, and `types`.
+
+Use the following export plans as the reference:
+
+```json
+{
+  "brain is an elastic storage.md": {
+    "key": "brain is an elastic storage.md",
+    "remote": {
+      "key": "brain is an elastic storage.md",
+      "keyRaw": "brain is an elastic storage.md",
+      "mtimeSvr": 1769111346000,
+      "mtimeCli": 1769111346000,
+      "sizeRaw": 1615,
+      "size": 1615,
+      "etag": "\"ac2b26cf45db08b1114ee8ecc29a88a5\"",
+      "synthesizedFolder": false,
+      "keyEnc": "brain is an elastic storage.md",
+      "sizeEnc": 1615,
+      "mtimeCliFmt": "2026-01-23T02:49:06+07:00",
+      "mtimeSvrFmt": "2026-01-23T02:49:06+07:00"
+    },
+    "prevSync": {
+      "key": "brain is an elastic storage.md",
+      "keyRaw": "brain is an elastic storage.md",
+      "mtimeSvr": 1769111346000,
+      "mtimeCli": 1769111341000,
+      "sizeRaw": 1615,
+      "size": 1615,
+      "etag": "\"ac2b26cf45db08b1114ee8ecc29a88a5\"",
+      "synthesizedFolder": false,
+      "keyEnc": "brain is an elastic storage.md",
+      "sizeEnc": 1615,
+      "mtimeCliFmt": "2026-01-23T02:49:01+07:00",
+      "mtimeSvrFmt": "2026-01-23T02:49:06+07:00"
+    },
+    "local": {
+      "key": "brain is an elastic storage.md",
+      "keyRaw": "brain is an elastic storage.md",
+      "mtimeCli": 1769111356000,
+      "mtimeSvr": 1769111356000,
+      "size": 1614,
+      "sizeRaw": 1614,
+      "mtimeCliFmt": "2026-01-23T02:49:16+07:00",
+      "mtimeSvrFmt": "2026-01-23T02:49:16+07:00",
+      "keyEnc": "brain is an elastic storage.md",
+      "sizeEnc": 1614
+    },
+    "decisionBranch": 10,
+    "decision": "local_is_modified_then_push",
+    "change": true
+  },
+  "/$@meta": {
+    "key": "/$@meta",
+    "sideNotes": {
+      "version": "20240714 fs version",
+      "generateTime": 1769111368972,
+      "generateTimeFmt": "2026-01-23T02:49:28+07:00",
+      "service": "s3",
+      "concurrency": 5,
+      "hasPassword": false,
+      "syncConfigDir": true,
+      "syncBookmarks": true,
+      "syncUnderscoreItems": true,
+      "skipSizeLargerThan": 10000000,
+      "protectModifyPercentage": 90,
+      "conflictAction": "keep_newer",
+      "syncDirection": "bidirectional",
+      "triggerSource": "auto_sync_on_save",
+      "sizeof": 605072
+    }
+  }
+}
+```
+
 ## Testing
 
 - Manual install for testing: copy `main.js`, `manifest.json`, `styles.css` (if any) to:
@@ -92,6 +191,7 @@ npm run build
 - If the plugin has configuration, provide a settings tab and sensible defaults.
 - Persist settings using `this.loadData()` / `this.saveData()`.
 - Use stable command IDs; avoid renaming once released.
+- Use Obsidian `SecretStorage` to handle secrets. See https://docs.obsidian.md/plugins/guides/secret-storage.
 
 ## Versioning & releases
 
