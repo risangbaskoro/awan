@@ -89,8 +89,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.onChange(async (value: string) => {
 					this.plugin.settings.syncInterval = Math.max(Number(value), 0) * 60000; // In convert to minutes
 					await this.plugin.saveSettings();
-				})
-			)
+				}))
 	}
 
 	/**
@@ -113,8 +112,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.onChange(async (value: string) => {
 					this.plugin.settings.s3.accessKeyId = value;
 					await this.plugin.saveSettings();
-				})
-			)
+				}))
 
 		new Setting(containerEl)
 			.setName('Secret key')
@@ -124,8 +122,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.onChange(async (value: string) => {
 					this.plugin.settings.s3.secretAccessKey = value;
 					await this.plugin.saveSettings();
-				})
-			)
+				}))
 
 		new Setting(containerEl)
 			.setName('Endpoint')
@@ -168,8 +165,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.onChange(async (value: number) => {
 					this.plugin.settings.s3.partsConcurrency = value;
 					await this.plugin.saveSettings();
-				})
-			)
+				}))
 
 		new Setting(containerEl)
 			.setName('Force path style')
@@ -187,8 +183,16 @@ export class AwanSettingTab extends PluginSettingTab {
 				.onChange(async (value: string) => {
 					this.plugin.settings.s3.remotePrefix = value;
 					await this.plugin.saveSettings();
-				})
-			)
+				}))
+
+		new Setting(containerEl)
+			.setName('Locally bypass CORS') // eslint-disable-line
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.s3.bypassCorsLocally ?? true)
+				.onChange(async (value: boolean) => {
+					this.plugin.settings.s3.bypassCorsLocally = value;
+					await this.plugin.saveSettings();
+				}))
 	}
 
 	/**

@@ -7,8 +7,10 @@ export interface S3Config {
 	region: string;
 	bucket: string;
 	partsConcurrency?: number;
-	forcePathStyle?: boolean;
+	forcePathStyle: boolean;
 	remotePrefix?: string;
+	bypassCorsLocally?: boolean;
+	reverseProxyNoSignUrl?: string;
 }
 
 export interface WebDAVConfig {

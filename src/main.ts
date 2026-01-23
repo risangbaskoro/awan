@@ -1,5 +1,6 @@
 import { Menu, Notice, Plugin, setIcon, setTooltip } from 'obsidian';
 import { DEFAULT_SETTINGS, AwanSettings, AwanSettingTab } from './settings';
+import { S3FileSystem } from 'fsS3';
 
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
@@ -53,7 +54,20 @@ export default class Awan extends Plugin {
 				menu.addItem(item => item
 					.setTitle('Sync')
 					.onClick(async () => {
-						await this.markIsSyncing(!this.isSyncing);
+						const testingNotice = new Notice('Testing connection.', 0);
+						await this.markIsSyncing(true);
+
+						const client = new S3FileSystem(this.app, this.settings.s3);
+						console.debug(client.getS3Client());
+						let result = await client.testConnection();
+
+						testingNotice.hide();
+						if (result) {
+							new Notice("Success", 5000);
+						} else {
+							new Notice("Failed!", 8000);
+						}
+						await this.markIsSyncing(false);
 					})
 				);
 				menu.addSeparator();
