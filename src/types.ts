@@ -6,7 +6,9 @@ export interface S3Config {
 	endpoint: string;
 	region: string;
 	bucket: string;
-	forcePathStyle: boolean;
+	partsConcurrency?: number;
+	forcePathStyle?: boolean;
+	remotePrefix?: string;
 }
 
 export interface WebDAVConfig {

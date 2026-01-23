@@ -64,7 +64,7 @@ export class AwanSettingTab extends PluginSettingTab {
 			.setDesc('Choose the cloud storage service to use for syncing.')
 			.addDropdown(dropdown => dropdown
 				.addOption('s3', 'Amazon S3 / S3-compatible')
-				.addOption('webdav', 'WebDAV (not yet implemented)')
+				.addOption('webdav', 'WebDAV (not yet implemented)') // eslint-disable-line
 				.setValue(this.plugin.settings.serviceType ?? 's3')
 				.onChange(async (value: SupportedServiceType) => {
 					this.plugin.settings.serviceType = value;
@@ -85,9 +85,9 @@ export class AwanSettingTab extends PluginSettingTab {
 			.setName('Sync interval (minutes)')
 			.setDesc('Scheduled sync interval in minutes. Will be ignored if auto sync is disabled.')
 			.addText(text => text
-				.setValue((this.plugin.settings.syncInterval / 60000).toString())
+				.setValue((Math.max(this.plugin.settings.syncInterval, 0) / 60000).toString())
 				.onChange(async (value: string) => {
-					this.plugin.settings.syncInterval = Number(value) * 60000; // In convert to minutes
+					this.plugin.settings.syncInterval = Math.max(Number(value), 0) * 60000; // In convert to minutes
 					await this.plugin.saveSettings();
 				})
 			)
@@ -160,12 +160,35 @@ export class AwanSettingTab extends PluginSettingTab {
 				}))
 
 		new Setting(containerEl)
+			.setName('Concurrency')
+			.addSlider(slider => slider
+				.setLimits(1, 20, 1)
+				.setDynamicTooltip()
+				.setValue(this.plugin.settings.s3.partsConcurrency ?? 5)
+				.onChange(async (value: number) => {
+					this.plugin.settings.s3.partsConcurrency = value;
+					await this.plugin.saveSettings();
+				})
+			)
+
+		new Setting(containerEl)
 			.setName('Force path style')
 			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.s3.forcePathStyle ?? false)
 				.onChange(async (value: boolean) => {
 					this.plugin.settings.s3.forcePathStyle = value;
 					await this.plugin.saveSettings();
 				}))
+
+		new Setting(containerEl)
+			.setName('Remote prefix')
+			.addText(text => text
+				.setValue(this.plugin.settings.s3.remotePrefix ?? "")
+				.onChange(async (value: string) => {
+					this.plugin.settings.s3.remotePrefix = value;
+					await this.plugin.saveSettings();
+				})
+			)
 	}
 
 	/**
@@ -176,11 +199,11 @@ export class AwanSettingTab extends PluginSettingTab {
 	private displayWebDAVSettings(containerEl: HTMLElement): void {
 		new Setting(containerEl)
 			.setHeading()
-			.setName('WebDAV')
-			.setDesc('WebDAV settings')
+			.setName('WebDAV') // eslint-disable-line
+			.setDesc('WebDAV settings') // eslint-disable-line
 
 		new Setting(containerEl)
-			.setName('WebDAV URL')
+			.setName('WebDAV URL') // eslint-disable-line
 			.setDesc('WebDAV server URL (e.g., https://example.com/webdav)')
 			.addText(text => text
 				.setPlaceholder('https://example.com/webdav')
@@ -210,6 +233,6 @@ export class AwanSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Status')
-			.setDesc('WebDAV support is coming in a future version.')
+			.setDesc('WebDAV support is coming in a future version.') // eslint-disable-line
 	}
 }

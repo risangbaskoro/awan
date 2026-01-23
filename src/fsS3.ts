@@ -18,7 +18,6 @@ export const DEFAULT_S3_CONFIG: S3Config = {
 	endpoint: "",
 	region: "",
 	bucket: "",
-	forcePathStyle: false
 }
 
 export const getS3Client = (app: App, config: S3Config): S3Client => {
