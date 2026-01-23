@@ -16,27 +16,31 @@ export class WebDAVFileSystem extends RemoteFileSystem {
 		this.config = config;
 	}
 
-	async uploadFile(options: UploadOptions): Promise<void> {
-		throw new Error('WebDAV upload not yet implemented');
+	async walk(): Promise<FileInfo[]> {
+		throw new Error("Method not implemented.");
 	}
-
-	async downloadFile(options: DownloadOptions): Promise<ArrayBuffer | Uint8Array | Blob | string> {
-		throw new Error('WebDAV download not yet implemented');
+	async walkPartial(): Promise<FileInfo[]> {
+		throw new Error("Method not implemented.");
 	}
-
-	async deleteFile(key: string): Promise<void> {
-		throw new Error('WebDAV delete not yet implemented');
+	async status(key: string): Promise<FileInfo> {
+		throw new Error("Method not implemented.");
 	}
-
-	async listFiles(options: ListOptions = {}): Promise<ListResult> {
-		throw new Error('WebDAV list files not yet implemented');
+	async mkdir(key: string, mtime?: number, ctime?: number): Promise<FileInfo> {
+		throw new Error("Method not implemented.");
 	}
-
-	async getFileInfo(key: string): Promise<FileInfo | null> {
-		throw new Error('WebDAV get file info not yet implemented');
+	async write(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<FileInfo> {
+		throw new Error("Method not implemented.");
 	}
-
-	async testConnection(): Promise<boolean> {
-		throw new Error('WebDAV connection test not yet implemented');
+	async read(key: string): Promise<ArrayBuffer> {
+		throw new Error("Method not implemented.");
+	}
+	async mv(from: string, to: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	async rm(key: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	async testConnection(callback?: any): Promise<boolean> {
+		throw new Error("Method not implemented.");
 	}
 }

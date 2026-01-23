@@ -1,6 +1,7 @@
 import { Menu, Notice, Plugin, setIcon, setTooltip } from 'obsidian';
 import { DEFAULT_SETTINGS, AwanSettings, AwanSettingTab } from './settings';
 import { S3FileSystem } from 'fsS3';
+import { RemoteFileSystemFactory } from 'fsAbstract';
 
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
@@ -58,7 +59,6 @@ export default class Awan extends Plugin {
 						await this.markIsSyncing(true);
 
 						const client = new S3FileSystem(this.app, this.settings.s3);
-						console.debug(client.getS3Client());
 						let result = await client.testConnection();
 
 						testingNotice.hide();
