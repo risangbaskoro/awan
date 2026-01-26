@@ -538,12 +538,10 @@ export class S3FileSystem extends RemoteFileSystem {
 			console.debug(err);
 			if (callback !== undefined) {
 				if (this.config.endpoint.contains(this.config.bucket)) {
-					const err2 = new AggregateError([
-						err,
-						new Error(
-							`You have included the bucket name inside the endpoint. Remove the bucket name and try again.`
-						),
-					]);
+					const err2 = new Error([
+						err?.toString() || '',
+						"You have included the bucket name inside the endpoint. Remove the bucket name and try again."
+					].join(' '));
 					callback(err2);
 				} else {
 					callback(err);

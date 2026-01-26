@@ -70,6 +70,13 @@ export class AwanSettingTab extends PluginSettingTab {
 					this.plugin.settings.serviceType = value;
 					await this.plugin.saveSettings();
 					this.display(); // Refresh the settings display
+				}))
+			.addButton(button => button
+				.setIcon('wifi-sync')
+				.setButtonText('Check connection')
+				.setCta()
+				.onClick(async () => {
+					await this.plugin.testConnection();
 				}));
 
 		new Setting(containerEl)
