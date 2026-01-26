@@ -421,31 +421,6 @@ export class S3FileSystem extends RemoteFileSystem {
 		return await this._write(uploadKey, content, mtime, ctime);
 	}
 
-	private async _writeUsingCommand(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<Entity> {
-		this.ensurePrefixed(key);
-		const body = new Uint8Array(content);
-
-		let contentType = DEFAULT_CONTENT_TYPE;
-		contentType = mime.contentType(mime.lookup(key) || DEFAULT_CONTENT_TYPE) || DEFAULT_CONTENT_TYPE;
-
-		// TODO: Configure for files larger than 5MB.
-		// Those files should use Multipart Upload.
-
-		let commandInput: PutObjectCommandInput = {
-			Bucket: this.config.bucket,
-			Key: key,
-			Body: body,
-			ContentType: contentType,
-			Metadata: {
-				MTime: `${mtime / 1000.0}`,
-				CTime: `${ctime / 1000.0}`,
-			},
-		}
-		await this.client.send(new PutObjectCommand(commandInput));
-
-		return await this._status(key);
-	}
-
 	private async _write(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<Entity> {
 		this.ensurePrefixed(key);
 		const body = new Uint8Array(content);
