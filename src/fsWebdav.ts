@@ -1,5 +1,5 @@
 import { App } from "obsidian";
-import { RemoteFileSystem, FileInfo, UploadOptions, DownloadOptions, ListOptions, ListResult } from "./fsAbstract";
+import { RemoteFileSystem, Entity } from "./fsAbstract";
 import { WebDAVConfig } from "types";
 
 export const DEFAULT_WEBDAV_CONFIG: WebDAVConfig = {
@@ -16,19 +16,19 @@ export class WebDAVFileSystem extends RemoteFileSystem {
 		this.config = config;
 	}
 
-	async walk(): Promise<FileInfo[]> {
+	async walk(): Promise<Entity[]> {
 		throw new Error("Method not implemented.");
 	}
-	async walkPartial(): Promise<FileInfo[]> {
+	async walkPartial(): Promise<Entity[]> {
 		throw new Error("Method not implemented.");
 	}
-	async status(key: string): Promise<FileInfo> {
+	async status(key: string): Promise<Entity> {
 		throw new Error("Method not implemented.");
 	}
-	async mkdir(key: string, mtime?: number, ctime?: number): Promise<FileInfo> {
+	async mkdir(key: string, mtime?: number, ctime?: number): Promise<Entity> {
 		throw new Error("Method not implemented.");
 	}
-	async write(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<FileInfo> {
+	async write(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<Entity> {
 		throw new Error("Method not implemented.");
 	}
 	async read(key: string): Promise<ArrayBuffer> {
@@ -40,7 +40,7 @@ export class WebDAVFileSystem extends RemoteFileSystem {
 	async rm(key: string): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
-	async testConnection(callback?: any): Promise<boolean> {
-		throw new Error("Method not implemented.");
+	async testConnection(): Promise<boolean> {
+		return false;
 	}
 }

@@ -1,24 +1,24 @@
 import { App } from "obsidian";
-import type { S3Config, SupportedServiceType, WebDAVConfig } from "types";
-import { S3FileSystem } from "./fsS3";
-import { WebDAVFileSystem } from "./fsWebdav";
+import type { SupportedServiceType } from "types";
+import { S3FileSystem } from "fsS3";
+import { WebDAVFileSystem } from "fsWebdav";
 import { nanoid } from "nanoid";
-import isEqual from "lodash/isEqual";
-import { AwanSettings } from "settings";
+import type { AwanSettings } from "settings";
+import { isEqual } from "lodash";
 
-export interface FileInfo {
+/**
+ * Entity is a file information.
+ */
+export interface Entity {
 	key: string;
 	keyRaw: string;
-	mtimeSvr: number;
-	mtimeCli: number;
+	serverMTime: number;
+	clientMTime: number;
 	sizeRaw: number;
 	size: number;
 	etag: string;
-	synthesizedFolder: boolean;
-	keyEnc: string;
-	sizeEnc: number;
-	mtimeCliFmt: string;
-	mtimeSvrFmt: string;
+	clientMTimeFormatted: string;
+	serverMTimeFormatted: string;
 }
 
 export interface UploadOptions {
@@ -40,7 +40,7 @@ export interface ListOptions {
 }
 
 export interface ListResult {
-	files: FileInfo[];
+	files: Entity[];
 	continuationToken?: string;
 	isTruncated: boolean;
 }
@@ -57,17 +57,17 @@ export abstract class RemoteFileSystem {
 	/**
 	 * Scan the entire vault.
 	 */
-	abstract walk(): Promise<FileInfo[]>;
+	abstract walk(): Promise<Entity[]>;
 	/**
 	 * Partially scan the entire vault.
 	 */
-	abstract walkPartial(): Promise<FileInfo[]>;
+	abstract walkPartial(): Promise<Entity[]>;
 	/**
 	 * Get the status of the file by key.
 	 *
 	 * @param key Key of the file.
 	 */
-	abstract status(key: string): Promise<FileInfo>;
+	abstract status(key: string): Promise<Entity>;
 	/**
 	 * Make a directory in the filesystem.
 	 *
@@ -75,7 +75,7 @@ export abstract class RemoteFileSystem {
 	 * @param mtime Modified time in UNIX timestamp.
 	 * @param ctime Created time in UNIX timestamp.
 	 */
-	abstract mkdir(key: string, mtime?: number, ctime?: number): Promise<FileInfo>;
+	abstract mkdir(key: string, mtime?: number, ctime?: number): Promise<Entity>;
 	/**
 	 * Write a file to the filesystem.
 	 *
@@ -84,7 +84,7 @@ export abstract class RemoteFileSystem {
 	 * @param mtime Modified time in UNIX timestamp.
 	 * @param ctime Created time in UNIX timestamp.
 	 */
-	abstract write(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<FileInfo>;
+	abstract write(key: string, content: ArrayBuffer, mtime: number, ctime: number): Promise<Entity>;
 	/**
 	 * Read a file from the filesystem.
 	 *
@@ -109,19 +109,19 @@ export abstract class RemoteFileSystem {
 	 *
 	 * @param callback Callback function to call.
 	 */
-	abstract testConnection(callback?: any): Promise<boolean>;
+	abstract testConnection(callback?: (err: any) => void): Promise<boolean>;
 
 	/**
 	 * Common test connection operations.
 	 */
-	async commonTestConnectionOps(onError?: any) {
+	async commonTestConnectionOps(onError?: (err: any) => void) {
 		try {
 			console.debug('Test connection: Create directory');
 			const dirName = `awan-test-dir-${nanoid()}/`;
 			await this.mkdir(dirName);
 
 			console.debug('Test connection: Write file');
-			const filepath = `${dirName}rs-test-file-${nanoid()}`;
+			const filepath = `${dirName}awan-test-file-${nanoid()}`;
 			const ctime = Date.now();
 			const mtime1 = Date.now();
 			const content1 = new ArrayBuffer(100);
@@ -163,7 +163,7 @@ export class RemoteFileSystemFactory {
 			throw Error(`Service type is not defined in the plugin settings.`)
 		}
 
-		switch (settings.serviceType!) {
+		switch (settings.serviceType) {
 			case 's3':
 				if (!settings.s3) {
 					throw new Error('S3 configuration is required for S3 service type');

@@ -1,3 +1,5 @@
+export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+
 export type SupportedServiceType = 's3' | 'webdav';
 
 export interface S3Config {
@@ -11,6 +13,8 @@ export interface S3Config {
 	remotePrefix?: string;
 	bypassCorsLocally?: boolean;
 	reverseProxyNoSignUrl?: string;
+	useAccurateMTime?: boolean;
+	generateFolderObject?: boolean;
 }
 
 export interface WebDAVConfig {

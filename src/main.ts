@@ -59,7 +59,12 @@ export default class Awan extends Plugin {
 						await this.markIsSyncing(true);
 
 						const client = new S3FileSystem(this.app, this.settings.s3);
-						let result = await client.testConnection();
+						let result = false;
+						try {
+							result = await client.testConnection();
+						} catch (err) {
+							console.error(result, err);
+						}
 
 						testingNotice.hide();
 						if (result) {
