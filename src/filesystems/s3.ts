@@ -12,12 +12,12 @@ import {
 	S3ClientConfig
 } from "@aws-sdk/client-s3";
 import { App, requestUrl, RequestUrlParam } from "obsidian";
-import { RemoteFileSystem, Entity } from "./fsAbstract";
+import { RemoteFileSystem, Entity } from "./abstract";
 import { FetchHttpHandler, FetchHttpHandlerOptions } from "@smithy/fetch-http-handler";
 import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { type HttpHandlerOptions } from "@smithy/types"
 import { buildQueryString } from "@smithy/querystring-builder"
-import { DEFAULT_CONTENT_TYPE, type S3Config } from "./types"
+import { DEFAULT_CONTENT_TYPE, type S3Config } from "types"
 import PQueue from "p-queue";
 import { bufferToArrayBuffer, getDirectoryLevels } from "utils";
 import { Upload } from "@aws-sdk/lib-storage";
@@ -558,9 +558,6 @@ export class S3FileSystem extends RemoteFileSystem {
 		}
 	}
 }
-
-// Export S3Config for other modules
-export type { S3Config } from "./types"
 
 function addPrefixPath(path: string, prefix: string) {
 	if (prefix === undefined || prefix === "") {

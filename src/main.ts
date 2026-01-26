@@ -1,8 +1,8 @@
 import { Menu, Notice, Plugin, setIcon, setTooltip, moment } from 'obsidian';
 import { AwanSettings, AwanSettingTab } from './settings';
-import { DEFAULT_S3_CONFIG, S3FileSystem } from 'fsS3';
 import { S3ConfigSchema, SyncStatus, WebDAVConfigSchema } from 'types';
-import { DEFAULT_WEBDAV_CONFIG } from 'fsWebdav';
+import { DEFAULT_S3_CONFIG, S3FileSystem } from 'filesystems/s3';
+import { DEFAULT_WEBDAV_CONFIG } from 'filesystems/webdav';
 
 export const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	password: '',
