@@ -24,8 +24,6 @@ import { Upload } from "@aws-sdk/lib-storage";
 // @ts-ignore
 import * as mime from "mime-types";
 import { Readable } from "stream"; // eslint-disable-line
-// @ts-ignore
-import { requestTimeout } from "@smithy/fetch-http-handler/dist-es/request-timeout";
 
 export const DEFAULT_S3_CONFIG: S3Config = {
 	accessKeyId: "",
@@ -99,7 +97,7 @@ class ObsidianRequestHandler extends FetchHttpHandler {
 			contentType = transformedHeaders["content-type"];
 		}
 
-		let transformedBody: any = body;
+		let transformedBody: string | ArrayBuffer | undefined = body;
 		if (ArrayBuffer.isView(body)) {
 			transformedBody = bufferToArrayBuffer(body);
 		}
@@ -136,12 +134,23 @@ class ObsidianRequestHandler extends FetchHttpHandler {
 					}),
 				};
 			}),
-			requestTimeout(this.requestTimeoutInMs)
 		];
+
+		promises.push(
+			new Promise<{ response: HttpResponse }>((_resolve, reject) => {
+				if (this.requestTimeoutInMs) {
+					setTimeout(() => {
+						const timeoutError = new Error(`Request did not complete within ${this.requestTimeoutInMs} ms`);
+						timeoutError.name = "TimeoutError";
+						reject(timeoutError);
+					}, this.requestTimeoutInMs);
+				}
+			})
+		);
 
 		if (abortSignal) {
 			promises.push(
-				new Promise<never>((_resolve, reject) => {
+				new Promise<{ response: HttpResponse }>((_resolve, reject) => {
 					abortSignal.onabort = () => {
 						const abortError = new Error("Request aborted");
 						abortError.name = "AbortError";
@@ -165,8 +174,8 @@ export const getS3Client = (app: App, config: S3Config): S3Client => {
 		endpoint: endpoint,
 		forcePathStyle: config.forcePathStyle,
 		credentials: {
-			accessKeyId: app.secretStorage.getSecret(config.accessKeyId) || '',
-			secretAccessKey: app.secretStorage.getSecret(config.secretAccessKey) || '',
+			accessKeyId: app.secretStorage.getSecret(config.accessKeyId || '') || '',
+			secretAccessKey: app.secretStorage.getSecret(config.secretAccessKey || '') || '',
 		},
 	};
 
@@ -309,17 +318,17 @@ export class S3FileSystem extends RemoteFileSystem {
 				mtimeRecords,
 				ctimeRecords
 			);
-			realEnrities.add(remoteEntity.key!);
+			realEnrities.add(remoteEntity.key);
 			res.push(remoteEntity);
 
-			for (const f of getDirectoryLevels(remoteEntity.key!, true)) {
+			for (const f of getDirectoryLevels(remoteEntity.key, true)) {
 				if (realEnrities.has(f)) {
 					delete this.synthDirectoryCache[f];
 					continue;
 				}
 				if (
-					!this.synthDirectoryCache.hasOwnProperty(f) ||
-					remoteEntity.serverMTime >= (this.synthDirectoryCache[f] as Entity).serverMTime!
+					!Object.prototype.hasOwnProperty.call(this.synthDirectoryCache, f) ||
+					remoteEntity.serverMTime >= (this.synthDirectoryCache[f] as Entity).serverMTime
 				) {
 					this.synthDirectoryCache[f] = {
 						key: f,
@@ -340,14 +349,14 @@ export class S3FileSystem extends RemoteFileSystem {
 	}
 
 	async status(key: string): Promise<Entity> {
-		if (this.synthDirectoryCache.hasOwnProperty(key)) {
+		if (Object.prototype.hasOwnProperty.call(this.synthDirectoryCache, key)) {
 			return this.synthDirectoryCache[key] as Entity;
 		}
 
 		let keyFullPath = key;
 		keyFullPath = addPrefixPath(keyFullPath, this.config.remotePrefix ?? "");
 
-		return await this._status(key);
+		return await this._status(keyFullPath);
 	}
 
 	private async _status(key: string): Promise<Entity> {
@@ -426,7 +435,7 @@ export class S3FileSystem extends RemoteFileSystem {
 		const body = new Uint8Array(content);
 
 		let contentType = DEFAULT_CONTENT_TYPE;
-		contentType = mime.contentType(mime.lookup(key) || DEFAULT_CONTENT_TYPE) || DEFAULT_CONTENT_TYPE;
+		contentType = mime.contentType(mime.lookup(key) || DEFAULT_CONTENT_TYPE) || DEFAULT_CONTENT_TYPE; // eslint-disable-line
 
 		const upload = new Upload({
 			client: this.client,
@@ -489,7 +498,7 @@ export class S3FileSystem extends RemoteFileSystem {
 		await this.client.send(command);
 	}
 
-	async testConnection(callback?: (err: any) => void): Promise<boolean> {
+	async testConnection(callback?: (err: unknown) => void): Promise<boolean> {
 		try {
 			console.debug("Test connection: List objects command")
 			const command = {
@@ -509,10 +518,10 @@ export class S3FileSystem extends RemoteFileSystem {
 			if (results.$metadata.httpStatusCode !== 200) {
 				throw Error(`Status code is not OK (200). Got: ${results.$metadata.httpStatusCode}`);
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.debug(err);
 			if (callback !== undefined) {
-				if (this.config.endpoint.contains(this.config.bucket)) {
+				if (this.config.endpoint?.contains(this.config.bucket!)) {
 					const err2 = new Error([
 						err?.toString() || '',
 						"You have included the bucket name inside the endpoint. Remove the bucket name and try again."
@@ -601,14 +610,7 @@ function fromS3HeadObjectToEntity(
 			Number.parseFloat(headObject.Metadata.mtime || headObject.Metadata.MTime || "0")
 		);
 		if (mtime !== 0) {
-			// to be compatible with RClone, we read and store the time in seconds in new version!
-			if (mtime >= 1000000000000) {
-				// it's a millsecond, uploaded by old codes..
-				clientMTime = mtime;
-			} else {
-				// it's a second, uploaded by new codes of the plugin from March 24, 2024
-				clientMTime = mtime * 1000;
-			}
+			clientMTime = mtime * 1000;
 		}
 	}
 	const key = removePrefixPath(path, remotePrefix);
@@ -628,7 +630,7 @@ function fromS3ObjectToEntity(
 	obj: _Object,
 	remotePrefix: string,
 	mtimeRecords: Record<string, number>,
-	ctimeRecords: Record<string, number>
+	_ctimeRecords: Record<string, number>
 ): Entity {
 	if (obj.LastModified === undefined) {
 		throw Error(`S3 Object ${obj.Key} does not have LastModified value: ${JSON.stringify(obj)}`)
@@ -664,22 +666,22 @@ function fromS3ObjectToEntity(
  * @param body The Body of GetObject
  * @returns Promise<ArrayBuffer>
  */
-async function getObjectBodyToArrayBuffer(body: Readable | ReadableStream | Blob | undefined) {
+async function getObjectBodyToArrayBuffer(body: Readable | ReadableStream | Blob | undefined): Promise<ArrayBuffer> {
 	if (body === undefined) {
 		throw Error(`ObjectBody is undefined and don't know how to deal with it`);
 	}
 	if (body instanceof Readable) {
-		return (await new Promise((resolve, reject) => {
+		return await new Promise((resolve, reject) => {
 			const chunks: Uint8Array[] = [];
-			body.on("data", (chunk) => chunks.push(chunk));
+			body.on("data", (chunk: Uint8Array) => chunks.push(chunk));
 			body.on("error", reject);
-			body.on("end", () => resolve(bufferToArrayBuffer(Buffer.concat(chunks))));
-		})) as ArrayBuffer;
+			body.on("end", () => resolve(bufferToArrayBuffer(Buffer.concat(chunks)))); // eslint-disable-line
+		});
 	} else if (body instanceof ReadableStream) {
 		return await new Response(body, {}).arrayBuffer();
 	} else if (body instanceof Blob) {
 		return await body.arrayBuffer();
 	} else {
-		throw TypeError(`The type of ${body} is not one of the supported types`);
+		throw TypeError(`The type of ${body as string} is not one of the supported types`);
 	}
 };

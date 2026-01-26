@@ -1,9 +1,6 @@
 import { App, IconName, PluginSettingTab, SecretComponent, Setting } from "obsidian";
 import Awan from "./main";
-import { DEFAULT_S3_CONFIG, } from "./fsS3";
 import type { S3Config, SupportedServiceType, WebDAVConfig } from "types";
-import { DEFAULT_WEBDAV_CONFIG } from "fsWebdav";
-
 
 export interface GeneralSettings {
 	/** The service type to use */
@@ -19,14 +16,6 @@ export interface GeneralSettings {
 export interface AwanSettings extends GeneralSettings {
 	s3: S3Config;
 	webdav: WebDAVConfig;
-}
-
-export const DEFAULT_SETTINGS: Partial<AwanSettings> = {
-	password: '',
-	syncInterval: 5 * 60000,
-	serviceType: 's3',
-	s3: DEFAULT_S3_CONFIG,
-	webdav: DEFAULT_WEBDAV_CONFIG
 }
 
 export class AwanSettingTab extends PluginSettingTab {
@@ -117,7 +106,7 @@ export class AwanSettingTab extends PluginSettingTab {
 			.addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
 				.setValue(this.plugin.settings.s3.accessKeyId ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.s3.accessKeyId = value;
+					this.plugin.settings.s3.accessKeyId = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -127,7 +116,7 @@ export class AwanSettingTab extends PluginSettingTab {
 			.addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
 				.setValue(this.plugin.settings.s3.secretAccessKey ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.s3.secretAccessKey = value;
+					this.plugin.settings.s3.secretAccessKey = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -137,7 +126,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.setPlaceholder('https://bucketname.s3.region.amazonaws.com')
 				.setValue(this.plugin.settings.s3.endpoint ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.s3.endpoint = value;
+					this.plugin.settings.s3.endpoint = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -148,7 +137,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.setPlaceholder('Region')
 				.setValue(this.plugin.settings.s3.region ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.s3.region = value;
+					this.plugin.settings.s3.region = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -159,7 +148,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.setPlaceholder('Bucket')
 				.setValue(this.plugin.settings.s3.bucket ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.s3.bucket = value;
+					this.plugin.settings.s3.bucket = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -220,7 +209,7 @@ export class AwanSettingTab extends PluginSettingTab {
 				.setPlaceholder('https://example.com/webdav')
 				.setValue(this.plugin.settings.webdav.url ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.webdav.url = value;
+					this.plugin.settings.webdav.url = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -229,7 +218,7 @@ export class AwanSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setValue(this.plugin.settings.webdav.username ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.webdav.username = value;
+					this.plugin.settings.webdav.username = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 
@@ -238,7 +227,7 @@ export class AwanSettingTab extends PluginSettingTab {
 			.addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
 				.setValue(this.plugin.settings.webdav.password ?? "")
 				.onChange(async (value: string) => {
-					this.plugin.settings.webdav.password = value;
+					this.plugin.settings.webdav.password = value ? value : undefined;
 					await this.plugin.saveSettings();
 				}))
 

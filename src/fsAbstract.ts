@@ -4,7 +4,7 @@ import { S3FileSystem } from "fsS3";
 import { WebDAVFileSystem } from "fsWebdav";
 import { nanoid } from "nanoid";
 import type { AwanSettings } from "settings";
-import { isEqual } from "lodash";
+import { isEqual } from "es-toolkit";
 
 /**
  * Entity is a file information.
@@ -109,12 +109,12 @@ export abstract class RemoteFileSystem {
 	 *
 	 * @param callback Callback function to call.
 	 */
-	abstract testConnection(callback?: (err: any) => void): Promise<boolean>;
+	abstract testConnection(callback?: (err: unknown) => void): Promise<boolean>;
 
 	/**
 	 * Common test connection operations.
 	 */
-	async commonTestConnectionOps(onError?: (err: any) => void) {
+	async commonTestConnectionOps(onError?: (err: unknown) => void) {
 		try {
 			console.debug('Test connection: Create directory');
 			const dirName = `awan-test-dir-${nanoid()}/`;

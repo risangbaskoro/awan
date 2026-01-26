@@ -1,4 +1,4 @@
-export function bufferToArrayBuffer(buffer: Buffer | Uint8Array | ArrayBufferView) {
+export function bufferToArrayBuffer(buffer: Buffer | Uint8Array | ArrayBufferView) { // eslint-disable-line
 	return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 };
 

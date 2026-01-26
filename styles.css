@@ -6,3 +6,13 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.animate-spin {
+	animation: spin 2s linear infinite;
+
+	@keyframes spin {
+	  to {
+		transform: rotate(360deg);
+	  }
+	}
+}
