@@ -1,6 +1,6 @@
 import { App } from "obsidian";
 import { RemoteFileSystem, Entity } from "./abstract";
-import { WebDAVConfig } from "types";
+import { WebDAVConfig } from "../types";
 
 export const DEFAULT_WEBDAV_CONFIG: WebDAVConfig = {
 	url: "",

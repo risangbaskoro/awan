@@ -17,9 +17,9 @@ import { FetchHttpHandler, FetchHttpHandlerOptions } from "@smithy/fetch-http-ha
 import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { type HttpHandlerOptions } from "@smithy/types"
 import { buildQueryString } from "@smithy/querystring-builder"
-import { DEFAULT_CONTENT_TYPE, type S3Config } from "types"
+import { DEFAULT_CONTENT_TYPE, type S3Config } from "../types"
 import PQueue from "p-queue";
-import { bufferToArrayBuffer, getDirectoryLevels } from "utils";
+import { bufferToArrayBuffer, getDirectoryLevels } from "../utils/functions";
 import { Upload } from "@aws-sdk/lib-storage";
 // @ts-ignore
 import * as mime from "mime-types";
@@ -97,13 +97,13 @@ class ObsidianRequestHandler extends FetchHttpHandler {
 			contentType = transformedHeaders["content-type"];
 		}
 
-		let transformedBody: string | ArrayBuffer | undefined = body;
+		let transformedBody: string | ArrayBuffer | Uint8Array<ArrayBufferLike> | undefined = body;
 		if (ArrayBuffer.isView(body)) {
-			transformedBody = bufferToArrayBuffer(body);
+			transformedBody = bufferToArrayBuffer(body) as ArrayBuffer;
 		}
 
 		const param: RequestUrlParam = {
-			body: transformedBody,
+			body: transformedBody as ArrayBuffer,
 			headers: transformedHeaders,
 			method: method,
 			url: url,
@@ -672,7 +672,7 @@ async function getObjectBodyToArrayBuffer(body: Readable | ReadableStream | Blob
 			const chunks: Uint8Array[] = [];
 			body.on("data", (chunk: Uint8Array) => chunks.push(chunk));
 			body.on("error", reject);
-			body.on("end", () => resolve(bufferToArrayBuffer(Buffer.concat(chunks)))); // eslint-disable-line
+			body.on("end", () => resolve(bufferToArrayBuffer(Buffer.concat(chunks)) as ArrayBuffer)); // eslint-disable-line
 		});
 	} else if (body instanceof ReadableStream) {
 		return await new Response(body, {}).arrayBuffer();

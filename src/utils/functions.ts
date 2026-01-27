@@ -1,4 +1,9 @@
-export function bufferToArrayBuffer(buffer: Buffer | Uint8Array | ArrayBufferView) { // eslint-disable-line
+/**
+ * Converts buffer or buffer like object to ArrayBuffer.
+ */
+export function bufferToArrayBuffer(
+	buffer: Buffer | Uint8Array | ArrayBufferView // eslint-disable-line
+): ArrayBuffer | ArrayBufferLike {
 	return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 };
 

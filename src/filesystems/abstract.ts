@@ -1,9 +1,9 @@
 import { App } from "obsidian";
-import type { SupportedServiceType } from "types";
+import type { SupportedServiceType } from "../types";
 import { S3FileSystem } from "./s3";
 import { WebDAVFileSystem } from "./webdav";
 import { nanoid } from "nanoid";
-import type { AwanSettings } from "settings";
+import type { AwanSettings } from "../settings";
 import { isEqual } from "es-toolkit";
 
 /**
