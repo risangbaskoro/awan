@@ -1,17 +1,43 @@
 import { Menu, Notice, Plugin, setIcon, setTooltip, moment } from 'obsidian';
-import { AwanSettings, AwanSettingTab } from './settings';
-import { S3ConfigSchema, SyncStatus, WebDAVConfigSchema } from 'types';
-import { DEFAULT_S3_CONFIG, S3FileSystem } from 'filesystems/s3';
-import { DEFAULT_WEBDAV_CONFIG } from 'filesystems/webdav';
+import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSettings } from './settings';
+import { S3ConfigSchema, SyncStatus } from './types';
+import { DEFAULT_S3_CONFIG, S3FileSystem } from './filesystems/s3';
+import { DEFAULT_WEBDAV_CONFIG } from './filesystems/webdav';
 
-export const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
+/** The default vault sync settings. */
+const DEFAULT_VAULT_SETTINGS: VaultSettings = {
+	main: true,
+	appearance: true,
+	themes: true,
+	hotkeys: true,
+	activeCorePlugins: true,
+	corePluginSettings: true,
+	activeCommunityPlugins: true,
+	communityPluginSettings: true
+}
+
+/** The default selective sync settings. */
+const DEFAULT_SELECTIVE_SYNC_SETTINGS: SelectiveSyncSettings = {
+	excludedFolders: [],
+	imageFiles: false,
+	audioFiles: false,
+	videoFiles: false,
+	pdfFiles: false,
+	otherFiles: false
+}
+
+/** The default Awan plugin settings. */
+const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	password: '',
 	syncInterval: 5 * 60000,
 	serviceType: 's3',
+	vaultSettings: DEFAULT_VAULT_SETTINGS,
+	selectiveSync: DEFAULT_SELECTIVE_SYNC_SETTINGS,
 	s3: DEFAULT_S3_CONFIG,
 	webdav: DEFAULT_WEBDAV_CONFIG
 }
 
+/** Awan plugin main class. */
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
 	status!: SyncStatus;
@@ -20,6 +46,7 @@ export default class Awan extends Plugin {
 	statusBarElement!: HTMLElement;
 	statusBarIcon!: HTMLSpanElement;
 
+	/** Setup when the plugin loads. */
 	async onload() {
 		console.debug(`${this.manifest.id}: Initializing...`);
 		await this.loadSettings();
@@ -33,6 +60,7 @@ export default class Awan extends Plugin {
 		console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
 
+	/** Teardown when the plugin unloads. */
 	onunload() {
 	}
 
@@ -172,7 +200,7 @@ export default class Awan extends Plugin {
 		switch (serviceType) {
 			case 's3': schema = S3ConfigSchema;
 				break;
-			case 'webdav': schema = WebDAVConfigSchema;
+			default: schema = S3ConfigSchema;
 				break;
 		}
 
