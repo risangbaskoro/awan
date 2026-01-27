@@ -2,6 +2,7 @@ import { App, IconName, PluginSettingTab, SecretComponent, SettingGroup } from "
 import Awan from "./main";
 import type { S3Config, SupportedServiceType, WebDAVConfig } from "./types";
 import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from "./utils/constants";
+import { ExcludedFoldersModal } from "ui/modal";
 
 export interface GeneralSettings {
 	/** The service type to use */
@@ -222,7 +223,7 @@ export class AwanSettingTab extends PluginSettingTab {
 						button
 							.setButtonText(`Configure`)
 							.onClick(() => {
-								// TODO: Open excluded folders modal.
+								new ExcludedFoldersModal(this.app, this.plugin).open();
 							})
 					})
 			})

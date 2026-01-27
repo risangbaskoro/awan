@@ -16,3 +16,51 @@ If your plugin does not need CSS, delete this file.
 	  }
 	}
 }
+
+/* Excluded Folders Modal */
+.awan-folder-list {
+	max-height: 400px;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-4-2);
+	margin: var(--size-4-3) 0;
+}
+
+.awan-folder-item {
+	padding: var(--size-4-1) var(--size-4-2);
+	cursor: pointer;
+	border-radius: var(--radius-s);
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	transition: background-color 0.2s ease;
+}
+
+.awan-folder-item:hover {
+	background-color: var(--interactive-hover);
+}
+
+.awan-folder-item.excluded {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.awan-folder-item.excluded:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.awan-folder-icon {
+	font-size: var(--font-ui-smaller);
+}
+
+.awan-folder-name {
+	flex: 1;
+}
+
+.awan-modal-button-container {
+	display: flex;
+	gap: var(--size-4-2);
+	justify-content: flex-end;
+	margin-top: var(--size-4-4);
+}
