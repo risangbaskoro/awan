@@ -17,7 +17,8 @@ import { FetchHttpHandler, FetchHttpHandlerOptions } from "@smithy/fetch-http-ha
 import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { type HttpHandlerOptions } from "@smithy/types"
 import { buildQueryString } from "@smithy/querystring-builder"
-import { DEFAULT_CONTENT_TYPE, type S3Config } from "../types"
+import { type S3Config } from "../types"
+import { DEFAULT_CONTENT_TYPE } from "../utils/constants";
 import PQueue from "p-queue";
 import { bufferToArrayBuffer, getDirectoryLevels } from "../utils/functions";
 import { Upload } from "@aws-sdk/lib-storage";

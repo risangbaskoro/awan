@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
-
 export enum SyncStatus {
 	UNINITIALIZED = 'Unintialized',
 	IDLE = 'Idle',

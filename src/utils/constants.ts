@@ -1,3 +1,6 @@
+/** Default content type to use to upload file. */
+export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+
 /** Image file extensions to allow to be synced. Enabled via settings. */
 export const IMAGE_EXTENSIONS: string[] = [
     "bmp",
