@@ -96,6 +96,18 @@ export default class Awan extends Plugin {
 				return false;
 			},
 		});
+
+		this.addCommand({
+			id: `setup`,
+			name: `Set up remote`,
+			checkCallback: (checking: boolean) => {
+				if (!(S3ConfigSchema.safeParse(this.settings.s3).success)) {
+					if (!checking) this.openSettingsTab();
+					return true;
+				}
+				return false;
+			}
+		});
 	}
 
 	registerStatusBar() {
@@ -109,21 +121,13 @@ export default class Awan extends Plugin {
 			const menu = new Menu();
 			menu.addItem(item => item
 				.setDisabled(this.isSyncing)
-				.setTitle(`Awan Sync: ${this.status}`)
-				.onClick(async () => {
-					await sync(this);
-				})
+				.setTitle(`${this.manifest.name}: ${this.status}`)
+				.onClick(() => sync(this))
 			);
 			menu.addSeparator();
 			menu.addItem(item => item
 				.setTitle('Settings')
-				.onClick(() => {
-					// Open the plugin settings tab using the app's internal API
-					// @ts-ignore
-					this.app.setting.open(); // eslint-disable-line
-					// @ts-ignore
-					this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
-				})
+				.onClick(() => this.openSettingsTab())
 			);
 			menu.showAtMouseEvent(ev);
 		})
@@ -172,6 +176,14 @@ export default class Awan extends Plugin {
 		} else {
 			this.updateStatus(SyncStatus.IDLE);
 		}
+	}
+
+	openSettingsTab() {
+		// Open the plugin settings tab using the app's internal API
+		// @ts-ignore
+		this.app.setting.open(); // eslint-disable-line
+		// @ts-ignore
+		this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
 	}
 
 	async loadSettings() {
