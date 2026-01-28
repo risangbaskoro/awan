@@ -73,16 +73,22 @@ export default class Awan extends Plugin {
 			name: 'Sync',
 			callback: async () => {
 				await sync(this);
-			}
+			},
+			checkCallback: () => {
+				return S3ConfigSchema.safeParse(this.settings.s3).success; // Ensure the remote is configured.
+			},
 		});
 
 		this.addCommand({
-			id: 'sync-dry-run',
-			name: 'Sync (dry run)',
+			id: `test-connection`,
+			name: `Test connection`,
 			callback: async () => {
-				new Notice('Syncing files (dry run).');
+				await testConnection(this);
+			},
+			checkCallback: () => {
+				return S3ConfigSchema.safeParse(this.settings.s3).success; // Ensure the remote is configured.
 			}
-		})
+		});
 	}
 
 	registerStatusBar() {
@@ -133,29 +139,6 @@ export default class Awan extends Plugin {
 
 	updateLastSynced() {
 		this.lastSynced = moment.now()
-	}
-
-	async testConnection() {
-		// TODO: Move the manager to the class property.
-
-		// TODO: Check if every required settings in a client exists.
-
-		const client = new S3Filesystem(this.app, this.settings.s3);
-		const notice = new Notice("Testing connection.", 0);
-
-		try {
-			const result = await client.testConnection();
-			if (!result) {
-				throw Error(`Whoops`);
-			}
-
-			new Notice('Connected to remote.')
-		} catch (err) {
-			new Notice(`Failed to connect to remote. Check your settings or internet connection.`);
-			new Notice(err as string);
-		} finally {
-			notice.hide();
-		}
 	}
 
 	updateStatus(status?: SyncStatus) {
