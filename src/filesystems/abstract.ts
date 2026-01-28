@@ -9,15 +9,28 @@ import { isEqual } from "es-toolkit";
  * Entity is a file information.
  */
 export interface Entity {
+	/** Key regardless of encryption. */
 	key: string;
+	/** Original key. */
 	keyRaw: string;
-	serverMTime: number;
-	clientMTime: number;
-	sizeRaw: number;
+	/** Size regardelss of encryption. */
 	size: number;
-	etag: string;
-	clientMTimeFormatted: string;
-	serverMTimeFormatted: string;
+	/** Original size. */
+	sizeRaw: number;
+	/** Client creation time. */
+	clientCTime?: number;
+	/** Client modified time. */
+	clientMTime?: number;
+	/** Server modified time. */
+	serverMTime?: number;
+	/** Formatted client creation time. */
+	clientCTimeFormatted?: string;
+	/** Formatted client modified time. */
+	clientMTimeFormatted?: string;
+	/** Formatted server modified time. */
+	serverMTimeFormatted?: string;
+	/** Etag for S3 bucket. */
+	etag?: string;
 }
 
 /** 
@@ -25,9 +38,9 @@ export interface Entity {
  */
 export abstract class Filesystem {
 	protected app: App;
-	protected serviceType: SupportedServiceType;
+	protected serviceType: SupportedServiceType | 'local';
 
-	constructor(app: App, serviceType: SupportedServiceType) {
+	constructor(app: App, serviceType: SupportedServiceType | 'local') {
 		this.app = app;
 		this.serviceType = serviceType;
 	}
@@ -130,7 +143,7 @@ export abstract class Filesystem {
 		}
 	}
 
-	getServiceType(): SupportedServiceType {
+	getServiceType(): SupportedServiceType | 'local' {
 		return this.serviceType;
 	}
 }
@@ -148,7 +161,7 @@ export class RemoteFileSystemFactory {
 				}
 				return new S3Filesystem(app, settings.s3);
 			default:
-				throw new Error(`Unsupported service type: ${settings.serviceType}`);
+				throw new Error(`Unsupported service type: ${settings.serviceType as string}`);
 		}
 	}
 }

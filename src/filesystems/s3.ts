@@ -311,7 +311,7 @@ export class S3Filesystem extends Filesystem {
 		await queueHead.onIdle();
 
 		const res: Entity[] = [];
-		const realEnrities = new Set<string>();
+		const realEntities = new Set<string>();
 		for (const remoteObj of contents) {
 			const remoteEntity = fromS3ObjectToEntity(
 				remoteObj,
@@ -319,17 +319,17 @@ export class S3Filesystem extends Filesystem {
 				mtimeRecords,
 				ctimeRecords
 			);
-			realEnrities.add(remoteEntity.key);
+			realEntities.add(remoteEntity.key);
 			res.push(remoteEntity);
 
 			for (const f of getDirectoryLevels(remoteEntity.key, true)) {
-				if (realEnrities.has(f)) {
+				if (realEntities.has(f)) {
 					delete this.synthDirectoryCache[f];
 					continue;
 				}
 				if (
 					!Object.prototype.hasOwnProperty.call(this.synthDirectoryCache, f) ||
-					remoteEntity.serverMTime >= (this.synthDirectoryCache[f] as Entity).serverMTime
+					remoteEntity.serverMTime! >= (this.synthDirectoryCache[f] as Entity).serverMTime!
 				) {
 					this.synthDirectoryCache[f] = {
 						key: f,
