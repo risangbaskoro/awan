@@ -151,26 +151,6 @@ export default class Awan extends Plugin {
 	}
 
 	/**
-	 * Update status bar.
-	 * 
-	 * This function optionally register status bar if not exists.
-	 */
-	updateStatusBar() {
-		this.registerStatusBar();
-
-		setTooltip(this.statusBarElement, this.status, { placement: "top" });
-		if (this.status === SyncStatus.UNINITIALIZED) {
-			setIcon(this.statusBarIcon, 'cloud-off');
-			this.statusBarIcon.addClass('mod-warning');
-		} else if (this.isSyncing) {
-			setIcon(this.statusBarIcon, 'refresh-cw');
-		} else {
-			setIcon(this.statusBarIcon, 'cloud-check');
-		}
-		this.statusBarIcon.toggleClass('animate-spin', this.isSyncing);
-	}
-
-	/**
 	 * Mark the plugin as currently syncing.
 	 */
 	private markIsSyncing(isSyncing: boolean) {
@@ -226,6 +206,67 @@ export default class Awan extends Plugin {
 			this.updateStatus(SyncStatus.UNINITIALIZED);
 		} else {
 			this.updateStatus(SyncStatus.IDLE);
+		}
+	}
+
+	/**
+	 * Update status bar.
+	 * 
+	 * This function optionally register status bar if not exists.
+	 */
+	updateStatusBar() {
+		this.registerStatusBar();
+
+		setTooltip(this.statusBarElement, this.status, { placement: "top" });
+		switch (this.status) {
+			case SyncStatus.UNINITIALIZED:
+				setIcon(this.statusBarIcon, 'cloud-off');
+				this.setStatusBarIconColor('warning');
+				break;
+			case SyncStatus.IDLE:
+				setIcon(this.statusBarIcon, 'cloud');
+				this.setStatusBarIconColor();
+				break;
+			case SyncStatus.SYNCING:
+				setIcon(this.statusBarIcon, 'refresh-cw');
+				this.setStatusBarIconColor();
+				break;
+			case SyncStatus.SUCCESS:
+				setIcon(this.statusBarIcon, 'cloud-check');
+				this.setStatusBarIconColor('success');
+				break;
+			case SyncStatus.ERROR:
+				setIcon(this.statusBarIcon, 'cloud-alert');
+				this.setStatusBarIconColor('warning');
+				break;
+			default:
+				break;
+		}
+
+		this.statusBarIcon.toggleClass('animate-spin', this.status === SyncStatus.SYNCING);
+	}
+
+	/**
+	 * Set the status bar icon color by adding or removing mod classes.
+	 * 
+	 * @param color The color to be used. If omitted, reset the color to default.
+	 */
+	private setStatusBarIconColor(color?: 'default' | 'success' | 'warning') {
+		switch (color) {
+			case 'success':
+				this.statusBarIcon.removeClass('mod-warning');
+				this.statusBarIcon.addClass('mod-success');
+				break;
+			case 'warning':
+				this.statusBarIcon.removeClass('mod-success');
+				this.statusBarIcon.addClass('mod-warning');
+				break;
+			case 'default':
+				this.statusBarIcon.removeClasses(['mod-success', 'mod-warning']);
+				break;
+			default:
+				this.statusBarIcon.removeClasses(['mod-success', 'mod-warning']);
+				break;
 		}
 	}
 
