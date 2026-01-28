@@ -54,6 +54,7 @@ export default class Awan extends Plugin {
 
 		this.updateStatus();
 		this.updateStatusBar();
+		this.markIsSyncing(false);
 
 		console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
@@ -108,12 +109,13 @@ export default class Awan extends Plugin {
 			this.statusBarElement = this.addStatusBarItem();
 			this.statusBarElement.addClass('mod-clickable')
 			const segment = this.statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] })
-			this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'sync-status-icon', 'mod-success'] })
+			this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'sync-status-icon'] })
 
 			// Register status bar menu on click.
 			this.statusBarElement.onClickEvent((ev: MouseEvent) => {
 				const menu = new Menu();
 				menu.addItem(item => item
+					.setDisabled(this.isSyncing)
 					.setTitle(`Awan Sync: ${this.status}`)
 					.onClick(async () => {
 						await this.runSync();
@@ -135,25 +137,17 @@ export default class Awan extends Plugin {
 		}
 
 		setTooltip(this.statusBarElement, this.status, { placement: "top" });
-		setIcon(this.statusBarIcon, 'cloud-check');
-
 		if (this.isSyncing) {
-			setIcon(this.statusBarIcon, 'iteration-cw');
+			setIcon(this.statusBarIcon, 'refresh-cw');
 		} else {
 			setIcon(this.statusBarIcon, 'cloud-check');
 		}
-
-		this.statusBarIcon.toggleClass('animate-spin', this.isSyncing)
+		this.statusBarIcon.toggleClass('animate-spin', this.isSyncing);
 	}
 
 	async markIsSyncing(isSyncing: boolean) {
 		this.isSyncing = isSyncing;
-
-		if (isSyncing) {
-			setIcon(this.statusBarElement, 'cloud')
-		} else {
-			setIcon(this.statusBarElement, 'cloud-check');
-		}
+		this.updateStatusBar();
 	}
 
 	updateLastSynced() {
