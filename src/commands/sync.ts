@@ -4,6 +4,13 @@ import { Notice } from "obsidian";
 import { SyncStatus } from "types";
 
 export default async function sync(plugin: Awan) {
+    // Abort if is currently syncing.
+    if (plugin.isSyncing) {
+        new Notice(`Sync is currently running.`);
+        return;
+    }
+
+    // Run the sync.
     let notice = new Notice('Syncing files.', 0);
     await plugin.markIsSyncing(true);
 
@@ -15,10 +22,12 @@ export default async function sync(plugin: Awan) {
         plugin.updateLastSynced();
         plugin.updateStatus(SyncStatus.SUCCESS);
         plugin.updateLastSynced();
-        new Notice(`Successfully synced files.`)
+        const resultNotice = new Notice(`Successfully synced files.`)
+        resultNotice.containerEl.addClass('mod-success');
     } catch (err) {
         // TODO: Catch error.
-        new Notice(`Failed to sync. ${err as string}`);
+        const resultNotice = new Notice(`Failed to sync. ${err as string}`);
+        resultNotice.containerEl.addClass('mod-warning');
         plugin.updateStatus(SyncStatus.ERROR);
     } finally {
         notice.hide();

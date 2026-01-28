@@ -520,7 +520,6 @@ export class S3Filesystem extends Filesystem {
 				throw Error(`Status code is not OK (200). Got: ${results.$metadata.httpStatusCode}`);
 			}
 		} catch (err: unknown) {
-			console.debug(err);
 			if (callback !== undefined) {
 				if (this.config.endpoint?.contains(this.config.bucket!)) {
 					const err2 = new Error([
@@ -528,11 +527,12 @@ export class S3Filesystem extends Filesystem {
 						"You have included the bucket name inside the endpoint. Remove the bucket name and try again."
 					].join(' '));
 					callback(err2);
+					throw err2;
 				} else {
 					callback(err);
 				}
 			}
-			return false;
+			throw err;
 		}
 
 		console.debug("Test connection: Walk");

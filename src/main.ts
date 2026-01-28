@@ -1,7 +1,7 @@
-import { Menu, Notice, Plugin, setIcon, setTooltip, moment } from 'obsidian';
+import { Menu, Plugin, setIcon, setTooltip, moment } from 'obsidian';
 import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
-import { DEFAULT_S3_CONFIG, S3Filesystem } from './filesystems/s3';
+import { DEFAULT_S3_CONFIG } from './filesystems/s3';
 import sync from './commands/sync';
 import { Database } from './database';
 import testConnection from 'commands/testConnection';
@@ -74,25 +74,27 @@ export default class Awan extends Plugin {
 
 	registerCommands() {
 		this.addCommand({
-			id: 'sync',
-			name: 'Sync',
-			callback: async () => {
-				await sync(this);
-			},
-			checkCallback: () => {
-				return S3ConfigSchema.safeParse(this.settings.s3).success; // Ensure the remote is configured.
+			id: `sync`,
+			name: `Sync`,
+			checkCallback: (checking: boolean) => {
+				if (S3ConfigSchema.safeParse(this.settings.s3).success) {
+					if (!checking) sync(this);
+					return true;
+				}
+				return false;
 			},
 		});
 
 		this.addCommand({
 			id: `test-connection`,
 			name: `Test connection`,
-			callback: async () => {
-				await testConnection(this);
+			checkCallback: (checking: boolean) => {
+				if (S3ConfigSchema.safeParse(this.settings.s3).success) {
+					if (!checking) testConnection(this);
+					return true;
+				}
+				return false;
 			},
-			checkCallback: () => {
-				return S3ConfigSchema.safeParse(this.settings.s3).success; // Ensure the remote is configured.
-			}
 		});
 	}
 

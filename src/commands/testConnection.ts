@@ -5,7 +5,6 @@ import { SyncStatus } from "types";
 
 export default async function testConnection(plugin: Awan) {
     let notice = new Notice('Testing connection.', 0);
-    await plugin.markIsSyncing(true);
 
     try {
         // TODO: Get client from plugin.
@@ -15,15 +14,15 @@ export default async function testConnection(plugin: Awan) {
         plugin.updateLastSynced();
         plugin.updateStatus(SyncStatus.IDLE);
         plugin.updateLastSynced();
-        new Notice(`Connected with connection ${plugin.settings.serviceType}.`);
+        const resultNotice = new Notice(`Connected with connection ${plugin.settings.serviceType}.`);
+        resultNotice.containerEl.addClass('mod-success');
     } catch (err) {
         // TODO: Catch error.
-        new Notice(`Failed to connect to remote. Check your settings or internet connection.`);
-        new Notice(err as string);
+        const resultNotice = new Notice(`Failed to connect to remote. Check your settings or internet connection. ${err as string}`);
+        resultNotice.containerEl.addClass('mod-warning');
         plugin.updateStatus(SyncStatus.UNINITIALIZED);
     } finally {
         notice.hide();
-        await plugin.markIsSyncing(false);
         plugin.updateStatusBar();
     }
 }
