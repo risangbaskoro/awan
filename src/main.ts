@@ -1,8 +1,7 @@
 import { Menu, Notice, Plugin, setIcon, setTooltip, moment } from 'obsidian';
 import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
-import { DEFAULT_S3_CONFIG, S3FileSystem } from './filesystems/s3';
-import { DEFAULT_WEBDAV_CONFIG } from './filesystems/webdav';
+import { DEFAULT_S3_CONFIG, S3Filesystem } from './filesystems/s3';
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -34,7 +33,6 @@ const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	vaultSettings: DEFAULT_VAULT_SETTINGS,
 	selectiveSync: DEFAULT_SELECTIVE_SYNC_SETTINGS,
 	s3: DEFAULT_S3_CONFIG,
-	webdav: DEFAULT_WEBDAV_CONFIG
 }
 
 /** Awan plugin main class. */
@@ -70,7 +68,7 @@ export default class Awan extends Plugin {
 
 		try {
 			// TODO: Syncing process.
-			const client = new S3FileSystem(this.app, this.settings.s3);
+			const client = new S3Filesystem(this.app, this.settings.s3);
 			await client.testConnection();
 
 			this.updateLastSynced();
@@ -167,7 +165,7 @@ export default class Awan extends Plugin {
 
 		// TODO: Check if every required settings in a client exists.
 
-		const client = new S3FileSystem(this.app, this.settings.s3);
+		const client = new S3Filesystem(this.app, this.settings.s3);
 		const notice = new Notice("Testing connection.", 0);
 
 		try {

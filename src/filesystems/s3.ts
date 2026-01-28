@@ -12,7 +12,7 @@ import {
 	S3ClientConfig
 } from "@aws-sdk/client-s3";
 import { App, requestUrl, RequestUrlParam } from "obsidian";
-import { RemoteFileSystem, Entity } from "./abstract";
+import { Filesystem, Entity } from "./abstract";
 import { FetchHttpHandler, FetchHttpHandlerOptions } from "@smithy/fetch-http-handler";
 import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { type HttpHandlerOptions } from "@smithy/types"
@@ -204,7 +204,7 @@ export const getS3Client = (app: App, config: S3Config): S3Client => {
 	return client;
 }
 
-export class S3FileSystem extends RemoteFileSystem {
+export class S3Filesystem extends Filesystem {
 	private client: S3Client;
 	private config: S3Config;
 	private synthDirectoryCache: Record<string, Entity>;
@@ -349,7 +349,7 @@ export class S3FileSystem extends RemoteFileSystem {
 		return res;
 	}
 
-	async status(key: string): Promise<Entity> {
+	async stat(key: string): Promise<Entity> {
 		if (Object.prototype.hasOwnProperty.call(this.synthDirectoryCache, key)) {
 			return this.synthDirectoryCache[key] as Entity;
 		}

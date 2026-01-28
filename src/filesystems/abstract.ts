@@ -1,7 +1,6 @@
 import { App } from "obsidian";
 import type { SupportedServiceType } from "../types";
-import { S3FileSystem } from "./s3";
-import { WebDAVFileSystem } from "./webdav";
+import { S3Filesystem } from "./s3";
 import { nanoid } from "nanoid";
 import type { AwanSettings } from "../settings";
 import { isEqual } from "es-toolkit";
@@ -21,31 +20,10 @@ export interface Entity {
 	serverMTimeFormatted: string;
 }
 
-export interface UploadOptions {
-	key: string;
-	body: ArrayBuffer | Uint8Array | Blob | string;
-	contentType?: string;
-	metadata?: Record<string, string>;
-}
-
-export interface DownloadOptions {
-	key: string;
-	range?: string;
-}
-
-export interface ListOptions {
-	prefix?: string;
-	maxKeys?: number;
-	continuationToken?: string;
-}
-
-export interface ListResult {
-	files: Entity[];
-	continuationToken?: string;
-	isTruncated: boolean;
-}
-
-export abstract class RemoteFileSystem {
+/** 
+ * Awan filesystem class.
+ */
+export abstract class Filesystem {
 	protected app: App;
 	protected serviceType: SupportedServiceType;
 
@@ -67,7 +45,7 @@ export abstract class RemoteFileSystem {
 	 *
 	 * @param key Key of the file.
 	 */
-	abstract status(key: string): Promise<Entity>;
+	abstract stat(key: string): Promise<Entity>;
 	/**
 	 * Make a directory in the filesystem.
 	 *
@@ -158,7 +136,7 @@ export abstract class RemoteFileSystem {
 }
 
 export class RemoteFileSystemFactory {
-	static async create(app: App, settings: Partial<AwanSettings>): Promise<RemoteFileSystem> {
+	static async create(app: App, settings: Partial<AwanSettings>): Promise<Filesystem> {
 		if (!settings.serviceType) {
 			throw Error(`Service type is not defined in the plugin settings.`)
 		}
@@ -168,14 +146,9 @@ export class RemoteFileSystemFactory {
 				if (!settings.s3) {
 					throw new Error('S3 configuration is required for S3 service type');
 				}
-				return new S3FileSystem(app, settings.s3);
-			case 'webdav':
-				if (!settings.webdav) {
-					throw new Error('WebDAV configuration is required for WebDAV service type');
-				}
-				return new WebDAVFileSystem(app, settings.webdav);
+				return new S3Filesystem(app, settings.s3);
 			default:
-				throw new Error('Unsupported service type');
+				throw new Error(`Unsupported service type: ${settings.serviceType}`);
 		}
 	}
 }

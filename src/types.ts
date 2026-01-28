@@ -8,7 +8,7 @@ export enum SyncStatus {
 	ERROR = 'Error',
 }
 
-export type SupportedServiceType = 's3' | 'webdav';
+export type SupportedServiceType = 's3';
 
 export const S3ConfigSchema = z.object({
 	accessKeyId: z.string().exactOptional(),
@@ -26,11 +26,3 @@ export const S3ConfigSchema = z.object({
 });
 
 export type S3Config = z.infer<typeof S3ConfigSchema>;
-
-export const WebDAVConfigSchema = z.object({
-	url: z.string().exactOptional(),
-	username: z.string().exactOptional(),
-	password: z.string().exactOptional(),
-})
-
-export type WebDAVConfig = z.infer<typeof WebDAVConfigSchema>;

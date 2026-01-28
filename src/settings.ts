@@ -1,6 +1,6 @@
 import { App, IconName, PluginSettingTab, SecretComponent, SettingGroup } from "obsidian";
 import Awan from "./main";
-import type { S3Config, SupportedServiceType, WebDAVConfig } from "./types";
+import type { S3Config, SupportedServiceType } from "./types";
 import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from "./utils/constants";
 import { ExcludedFoldersModal } from "ui/modal";
 
@@ -53,7 +53,6 @@ export interface AwanSettings extends GeneralSettings {
 	vaultSettings: VaultSettings;
 	selectiveSync: SelectiveSyncSettings;
 	s3: S3Config;
-	webdav: WebDAVConfig;
 }
 
 export class AwanSettingTab extends PluginSettingTab {
