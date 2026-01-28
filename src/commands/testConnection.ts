@@ -15,12 +15,10 @@ export default async function testConnection(plugin: Awan) {
         const resultNotice = new Notice(`Connected with connection ${plugin.settings.serviceType}.`);
         resultNotice.containerEl.addClass('mod-success');
     } catch (err) {
-        // TODO: Catch error.
         const resultNotice = new Notice(`Failed to connect to remote. Check your settings or internet connection. ${err as string}`);
         resultNotice.containerEl.addClass('mod-warning');
         plugin.updateStatus(SyncStatus.UNINITIALIZED);
     } finally {
         notice.hide();
-        plugin.updateStatusBar();
     }
 }
