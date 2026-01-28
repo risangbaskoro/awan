@@ -68,6 +68,12 @@ export default class Awan extends Plugin {
 		this.updateStatus();
 		this.registerStatusBar();
 
+		// Updates the status whenever a file is changed.
+		this.registerEvent(this.app.vault.on('modify', (_file) => {
+			if (this.status === SyncStatus.ERROR) return;
+			this.updateStatus();
+		}));
+
 		console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
 
