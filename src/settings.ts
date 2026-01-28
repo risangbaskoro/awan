@@ -1,8 +1,9 @@
-import { App, IconName, PluginSettingTab, SecretComponent, SettingGroup } from "obsidian";
+import { App, IconName, PluginSettingTab, SettingGroup } from "obsidian";
 import Awan from "./main";
 import type { S3Config, SupportedServiceType } from "./types";
-import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from "./utils/constants";
-import { ExcludedFoldersModal } from "ui/modal";
+import { S3SettingsGroup } from "ui/settings/s3SettingsGroup";
+import { SelectiveSyncSettingsGroup } from "ui/settings/selectiveSyncSettingsGroup";
+import { VaultSyncSettingsGroup } from "ui/settings/vaultSyncSettingsGroup";
 
 /** Settings enable sync vault settings. */
 export interface VaultSyncSettings {
@@ -76,19 +77,6 @@ export class AwanSettingTab extends PluginSettingTab {
 
 		const generalSettings = new SettingGroup(containerEl)
 			.setHeading(`General`)
-			// .addSetting(setting => {
-			// 	setting
-			// 		.setName('Service type')
-			// 		.setDesc('Choose the cloud storage service to use for syncing.')
-			// 		.addDropdown(dropdown => dropdown
-			// 			.addOption('s3', 'Amazon S3 / S3-compatible')
-			// 			.setValue(this.plugin.settings.serviceType ?? 's3')
-			// 			.onChange(async (value: SupportedServiceType) => {
-			// 				this.plugin.settings.serviceType = value;
-			// 				await this.plugin.saveSettings();
-			// 				this.display(); // Refresh the settings display
-			// 			}))
-			// })
 			.addSetting(setting => {
 				setting
 					.setName('Auto sync')
@@ -118,289 +106,16 @@ export class AwanSettingTab extends PluginSettingTab {
 		}
 
 		// Vault settings.
-		this.displayVaultConfig(containerEl);
+		// this.displayVaultConfig(containerEl);
+		new VaultSyncSettingsGroup(containerEl, this.app, this.plugin)
+			.setHeading(`Vault configuration`);
 
 		// Selective sync settings.
-		this.displaySelectiveSyncConfig(containerEl);
+		new SelectiveSyncSettingsGroup(containerEl, this.app, this.plugin)
+			.setHeading(`Selective sync`);
 
 		// Remote storage settings.
-		this.displayS3Config(containerEl);
-	}
-
-	/**
-	 * Display configuration related to notes.
-	 */
-	private displayVaultConfig(containerEl: HTMLElement): void {
-		new SettingGroup(containerEl)
-			.setHeading(`Vault configuration`)
-			.addSetting(setting => {
-				setting
-					.setName(`Main settings`)
-					.setDesc(`Sync editor, file, link settings.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.main)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.main = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Appearance settings`)
-					.setDesc(`Sync dark mode, active theme, and enabled snippets.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.appearance)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.appearance = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Hotkeys`)
-					.setDesc(`Sync custom hotkeys.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.hotkeys)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.hotkeys = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Active core plugins`)
-					.setDesc(`Sync which core plugins are enabled.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.activeCorePlugins)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.activeCorePlugins = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Core plugins settings`)
-					.setDesc(`Sync core plugins settings.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.corePluginSettings)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.corePluginSettings = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Active community plugins`)
-					.setDesc(`Sync which community plugins are enabled.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.activeCommunityPlugins)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.activeCommunityPlugins = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Community plugins settings`)
-					.setDesc(`Sync community plugin settings.`)
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSyncSettings.communityPluginSettings)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSyncSettings.communityPluginSettings = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-	}
-
-	/**
-	 * Display selective sync settings.
-	 * Let users to choose whether to exclude folders or sync images, videos, audio, pdf.
-	 */
-	private displaySelectiveSyncConfig(containerEl: HTMLElement): void {
-		new SettingGroup(containerEl)
-			.setHeading(`Selective sync`)
-			.addSetting(setting => {
-				setting
-					.setName(`Excluded folders`)
-					.setDesc(`Prevent certain folders from being synced to remote storage.`)
-					.addButton(button => {
-						button
-							.setButtonText(`Configure`)
-							.onClick(() => {
-								new ExcludedFoldersModal(this.app, this.plugin).open();
-							})
-					})
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Sync image files`)
-					.setDesc(`Allow image files (${IMAGE_EXTENSIONS.join(', ')}) to be synced.`)
-					.addToggle(toggle => {
-						toggle
-							.setValue(this.plugin.settings.selectiveSync.imageFiles)
-							.onChange(async (value: boolean) => {
-								this.plugin.settings.selectiveSync.imageFiles = value;
-								await this.plugin.saveSettings();
-							})
-					})
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Sync audio files`)
-					.setDesc(`Allow audio files (${AUDIO_EXTENSIONS.join(', ')}) to be synced.`)
-					.addToggle(toggle => {
-						toggle
-							.setValue(this.plugin.settings.selectiveSync.audioFiles)
-							.onChange(async (value: boolean) => {
-								this.plugin.settings.selectiveSync.audioFiles = value;
-								await this.plugin.saveSettings();
-							})
-					})
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Sync video files`)
-					.setDesc(`Allow video files (${VIDEO_EXTENSIONS.join(', ')}) to be synced.`)
-					.addToggle(toggle => {
-						toggle
-							.setValue(this.plugin.settings.selectiveSync.videoFiles)
-							.onChange(async (value: boolean) => {
-								this.plugin.settings.selectiveSync.videoFiles = value;
-								await this.plugin.saveSettings();
-							})
-					})
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Sync PDF files`)
-					.setDesc(`Allow PDF files to be synced.`)
-					.addToggle(toggle => {
-						toggle
-							.setValue(this.plugin.settings.selectiveSync.pdfFiles)
-							.onChange(async (value: boolean) => {
-								this.plugin.settings.selectiveSync.pdfFiles = value;
-								await this.plugin.saveSettings();
-							})
-					})
-			})
-			.addSetting(setting => {
-				setting
-					.setName(`Sync all other types`)
-					.setDesc(`Allow other file types to be synced.`)
-					.addToggle(toggle => {
-						toggle
-							.setValue(this.plugin.settings.selectiveSync.otherFiles)
-							.onChange(async (value: boolean) => {
-								this.plugin.settings.selectiveSync.otherFiles = value;
-								await this.plugin.saveSettings();
-							})
-					})
-			})
-	}
-
-	/**
-	 * Display S3 settings.
-	 * All data from here should be saved under `S3Settings`.
-	 *
-	 * @private
-	 */
-	private displayS3Config(containerEl: HTMLElement): void {
-		new SettingGroup(containerEl)
-			.setHeading(`S3 configuration`)
-			.addSetting(setting => {
-				setting
-					.setName('Access key')
-					.addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
-						.setValue(this.plugin.settings.s3.accessKeyId ?? "")
-						.onChange(async (value: string) => {
-							this.plugin.settings.s3.accessKeyId = value ? value : undefined;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Secret key')
-					.addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
-						.setValue(this.plugin.settings.s3.secretAccessKey ?? "")
-						.onChange(async (value: string) => {
-							this.plugin.settings.s3.secretAccessKey = value ? value : undefined;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Endpoint')
-					.addText(text => text
-						.setPlaceholder('https://bucketname.s3.region.amazonaws.com')
-						.setValue(this.plugin.settings.s3.endpoint ?? "")
-						.onChange(async (value: string) => {
-							this.plugin.settings.s3.endpoint = value ? value : undefined;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Region')
-					.addText(text => text
-						.setPlaceholder('Region')
-						.setValue(this.plugin.settings.s3.region ?? "")
-						.onChange(async (value: string) => {
-							this.plugin.settings.s3.region = value ? value : undefined;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Bucket')
-					.addText(text => text
-						.setPlaceholder('Bucket')
-						.setValue(this.plugin.settings.s3.bucket ?? "")
-						.onChange(async (value: string) => {
-							this.plugin.settings.s3.bucket = value ? value : undefined;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Concurrency')
-					.addSlider(slider => slider
-						.setLimits(1, 20, 1)
-						.setDynamicTooltip()
-						.setValue(this.plugin.settings.s3.partsConcurrency ?? 5)
-						.onChange(async (value: number) => {
-							this.plugin.settings.s3.partsConcurrency = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Force path style')
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.s3.forcePathStyle ?? false)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.s3.forcePathStyle = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Remote prefix')
-					.addText(text => text
-						.setValue(this.plugin.settings.s3.remotePrefix ?? "")
-						.onChange(async (value: string) => {
-							this.plugin.settings.s3.remotePrefix = value;
-							await this.plugin.saveSettings();
-						}))
-			})
-			.addSetting(setting => {
-				setting
-					.setName('Locally bypass CORS') // eslint-disable-line
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.s3.bypassCorsLocally ?? true)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.s3.bypassCorsLocally = value;
-							await this.plugin.saveSettings();
-						}))
-			})
+		new S3SettingsGroup(containerEl, this.app, this.plugin)
+			.setHeading(`S3 configuration`);
 	}
 }
