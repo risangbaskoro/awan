@@ -11,9 +11,7 @@ export default async function testConnection(plugin: Awan) {
         const client = new S3Filesystem(plugin.app, plugin.settings.s3);
         await client.testConnection();
 
-        plugin.updateLastSynced();
         plugin.updateStatus(SyncStatus.IDLE);
-        plugin.updateLastSynced();
         const resultNotice = new Notice(`Connected with connection ${plugin.settings.serviceType}.`);
         resultNotice.containerEl.addClass('mod-success');
     } catch (err) {

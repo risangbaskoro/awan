@@ -4,7 +4,7 @@ import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
 import sync from './commands/sync';
 import { Database } from './database';
-import testConnection from 'commands/testConnection';
+import testConnection from './commands/testConnection';
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSyncSettings = {
@@ -41,17 +41,21 @@ const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	s3: DEFAULT_S3_CONFIG,
 }
 
-/** Awan plugin main class. */
+/** 
+ * Awan plugin main class. 
+ */
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
 	database!: Database;
 	status!: SyncStatus;
 	isSyncing!: boolean;
 	lastSynced: number;
-	statusBarElement!: HTMLElement;
-	statusBarIcon!: HTMLSpanElement;
+	statusBarElement: HTMLElement;
+	statusBarIcon: HTMLSpanElement;
 
-	/** Setup when the plugin loads. */
+	/** 
+	 * Setup when the plugin loads.
+	 */
 	async onload() {
 		console.debug(`${this.manifest.id}: Initializing...`);
 		await this.loadSettings();
@@ -63,22 +67,28 @@ export default class Awan extends Plugin {
 
 		this.updateStatus();
 		this.registerStatusBar();
-		await this.markIsSyncing(false);
 
 		console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
 
-	/** Teardown when the plugin unloads. */
+	/** 
+	 * Teardown when the plugin unloads. 
+	 */
 	onunload() {
 	}
 
-	registerCommands() {
+	/**
+	 * Register commands of the plugin.
+	 * 
+	 * @private
+	 */
+	private registerCommands() {
 		this.addCommand({
 			id: `sync`,
 			name: `Sync`,
 			checkCallback: (checking: boolean) => {
 				if (S3ConfigSchema.safeParse(this.settings.s3).success) {
-					if (!checking) sync(this);
+					if (!checking) void sync(this);
 					return true;
 				}
 				return false;
@@ -90,7 +100,7 @@ export default class Awan extends Plugin {
 			name: `Test connection`,
 			checkCallback: (checking: boolean) => {
 				if (S3ConfigSchema.safeParse(this.settings.s3).success) {
-					if (!checking) testConnection(this);
+					if (!checking) void testConnection(this);
 					return true;
 				}
 				return false;
@@ -110,11 +120,18 @@ export default class Awan extends Plugin {
 		});
 	}
 
-	registerStatusBar() {
+	/**
+	 * Register statusbar elemnt if not exists.
+	 * 
+	 * @private
+	 */
+	private registerStatusBar() {
+		if (this.statusBarElement && this.statusBarIcon) return;
+
 		this.statusBarElement = this.addStatusBarItem();
 		this.statusBarElement.addClass('mod-clickable');
-		const segment = this.statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] })
-		this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] })
+		const segment = this.statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] });
+		this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
 
 		// Register status bar menu on click.
 		this.statusBarElement.onClickEvent((ev: MouseEvent) => {
@@ -130,12 +147,22 @@ export default class Awan extends Plugin {
 				.onClick(() => this.openSettingsTab())
 			);
 			menu.showAtMouseEvent(ev);
-		})
+		});
 	}
 
+	/**
+	 * Update status bar.
+	 * 
+	 * This function optionally register status bar if not exists.
+	 */
 	updateStatusBar() {
+		this.registerStatusBar();
+
 		setTooltip(this.statusBarElement, this.status, { placement: "top" });
-		if (this.isSyncing) {
+		if (this.status === SyncStatus.UNINITIALIZED) {
+			setIcon(this.statusBarIcon, 'cloud-off');
+			this.statusBarIcon.addClass('mod-warning');
+		} else if (this.isSyncing) {
 			setIcon(this.statusBarIcon, 'refresh-cw');
 		} else {
 			setIcon(this.statusBarIcon, 'cloud-check');
@@ -143,19 +170,43 @@ export default class Awan extends Plugin {
 		this.statusBarIcon.toggleClass('animate-spin', this.isSyncing);
 	}
 
-	async markIsSyncing(isSyncing: boolean) {
+	/**
+	 * Mark the plugin as currently syncing.
+	 */
+	private markIsSyncing(isSyncing: boolean) {
 		this.isSyncing = isSyncing;
-		this.updateStatusBar();
 	}
 
-	updateLastSynced() {
-		this.lastSynced = moment.now()
-	}
-
+	/**
+	 * Update the plugin status.
+	 * 
+	 * @param status The status of the plugin.
+	 */
 	updateStatus(status?: SyncStatus) {
 		// Set status if defined.
 		if (status) {
 			this.status = status;
+			switch (status) {
+				case SyncStatus.UNINITIALIZED:
+					this.markIsSyncing(false);
+					break;
+				case SyncStatus.IDLE:
+					this.markIsSyncing(false);
+					break;
+				case SyncStatus.SYNCING:
+					this.markIsSyncing(true);
+					break;
+				case SyncStatus.SUCCESS:
+					this.markIsSyncing(false);
+					this.lastSynced = moment.now();
+					break;
+				case SyncStatus.ERROR:
+					this.markIsSyncing(false);
+					break;
+				default:
+					break;
+			}
+			this.updateStatusBar();
 			return;
 		}
 
@@ -178,6 +229,12 @@ export default class Awan extends Plugin {
 		}
 	}
 
+	/**
+	 * Open settings tab in Obsidian.
+	 * 
+	 * This function calls the inner app setting object,
+	 * then open setting tab by ID of this plugin.
+	 */
 	openSettingsTab() {
 		// Open the plugin settings tab using the app's internal API
 		// @ts-ignore
@@ -186,10 +243,16 @@ export default class Awan extends Plugin {
 		this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
 	}
 
+	/**
+	 * Load settings from plugin's `data.json` file.
+	 */
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_AWAN_SETTINGS, await this.loadData() as AwanSettings);
 	}
 
+	/**
+	 * Save settings to plugin's `data.json` file.
+	 */
 	async saveSettings() {
 		await this.saveData(this.settings);
 		this.updateStatus();

@@ -12,16 +12,14 @@ export default async function sync(plugin: Awan) {
 
     // Run the sync.
     let notice = new Notice('Syncing files.', 0);
-    await plugin.markIsSyncing(true);
+    plugin.updateStatus(SyncStatus.SYNCING);
 
     try {
         // TODO: Get client from plugin.
         const client = new S3Filesystem(plugin.app, plugin.settings.s3);
         await client.testConnection();
 
-        plugin.updateLastSynced();
         plugin.updateStatus(SyncStatus.SUCCESS);
-        plugin.updateLastSynced();
         const resultNotice = new Notice(`Successfully synced files.`)
         resultNotice.containerEl.addClass('mod-success');
     } catch (err) {
@@ -31,7 +29,6 @@ export default async function sync(plugin: Awan) {
         plugin.updateStatus(SyncStatus.ERROR);
     } finally {
         notice.hide();
-        await plugin.markIsSyncing(false);
         plugin.updateStatusBar();
     }
 }
