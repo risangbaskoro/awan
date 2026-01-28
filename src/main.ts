@@ -3,6 +3,8 @@ import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings 
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG, S3Filesystem } from './filesystems/s3';
 import sync from './commands/sync';
+import { Database } from './database';
+import testConnection from 'commands/testConnection';
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSyncSettings = {
@@ -42,6 +44,7 @@ const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 /** Awan plugin main class. */
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
+	database!: Database;
 	status!: SyncStatus;
 	isSyncing!: boolean;
 	lastSynced: number;
@@ -52,6 +55,8 @@ export default class Awan extends Plugin {
 	async onload() {
 		console.debug(`${this.manifest.id}: Initializing...`);
 		await this.loadSettings();
+
+		this.database = new Database(this.app);
 
 		this.registerCommands();
 		this.addSettingTab(new AwanSettingTab(this.app, this));

@@ -39,6 +39,7 @@
 		"buffer": "^6.0.3",
 		"es-toolkit": "^1.44.0",
 		"events": "^3.3.0",
+		"localforage": "^1.10.0",
 		"mime-types": "^3.0.2",
 		"nanoid": "^5.1.6",
 		"obsidian": "^1.11.0",
