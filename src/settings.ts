@@ -4,18 +4,8 @@ import type { S3Config, SupportedServiceType } from "./types";
 import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from "./utils/constants";
 import { ExcludedFoldersModal } from "ui/modal";
 
-export interface GeneralSettings {
-	/** The service type to use */
-	serviceType: SupportedServiceType;
-	/** The key to password in Obsidian keychain for encryption. */
-	password: string;
-	/** Whether to enable scheduled sync. */
-	autoSync: boolean;
-	/** Sync interval in milliseconds. */
-	syncInterval: number;
-}
-
-export interface VaultSettings {
+/** Settings enable sync vault settings. */
+export interface VaultSyncSettings {
 	/** Whether to sync main settings (stored in `app.json`) */
 	main: boolean;
 	/** Whether to sync appearance settings (stored in `appearance.json`) */
@@ -34,6 +24,7 @@ export interface VaultSettings {
 	communityPluginSettings: boolean;
 }
 
+/** Settings to select which files in the vault to be synced. */
 export interface SelectiveSyncSettings {
 	/** Folders (directory, prefix) to exclude from being synced. */
 	excludedFolders: string[];
@@ -49,9 +40,23 @@ export interface SelectiveSyncSettings {
 	otherFiles: boolean;
 }
 
-export interface AwanSettings extends GeneralSettings {
-	vaultSettings: VaultSettings;
+export interface AwanSettings {
+	/** The service type to use */
+	serviceType: SupportedServiceType;
+	/** The key to password in Obsidian keychain for encryption. */
+	password: string;
+	/** Scheduled sync configuration. */
+	scheduledSync: {
+		/** Whether to enable scheduled sync. */
+		enabled?: boolean;
+		/** Sync interval in milliseconds. */
+		interval?: number;
+	};
+	/** Settings enable sync vault settings. */
+	vaultSyncSettings: VaultSyncSettings;
+	/** Settings to select which files in the vault to be synced. */
 	selectiveSync: SelectiveSyncSettings;
+	/** S3 configurations. */
 	s3: S3Config;
 }
 
@@ -88,24 +93,24 @@ export class AwanSettingTab extends PluginSettingTab {
 				setting
 					.setName('Auto sync')
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.autoSync ?? false)
+						.setValue(this.plugin.settings.scheduledSync.enabled ?? false)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.autoSync = value;
+							this.plugin.settings.scheduledSync.enabled = value;
 							await this.plugin.saveSettings();
 							this.display();
 						}))
 			});
 
-		if (this.plugin.settings.autoSync) {
+		if (this.plugin.settings.scheduledSync.enabled) {
 			generalSettings
 				.addSetting(setting => {
 					setting
 						.setName('Sync interval (minutes)')
 						.setDesc('Scheduled sync interval in minutes.')
 						.addText(text => text
-							.setValue((Math.max(this.plugin.settings.syncInterval, 0) / 60000).toString())
+							.setValue((Math.max(this.plugin.settings.scheduledSync.interval ?? 0, 0) / 60000).toString())
 							.onChange(async (value: string) => {
-								this.plugin.settings.syncInterval = Math.max(Number(value), 0) * 60000; // In convert to minutes
+								this.plugin.settings.scheduledSync.interval = Math.max(Number(value), 0) * 60000; // In convert to minutes
 								await this.plugin.saveSettings();
 							})
 						)
@@ -133,9 +138,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Main settings`)
 					.setDesc(`Sync editor, file, link settings.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.main)
+						.setValue(this.plugin.settings.vaultSyncSettings.main)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.main = value;
+							this.plugin.settings.vaultSyncSettings.main = value;
 							await this.plugin.saveSettings();
 						}))
 			})
@@ -144,9 +149,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Appearance settings`)
 					.setDesc(`Sync dark mode, active theme, and enabled snippets.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.appearance)
+						.setValue(this.plugin.settings.vaultSyncSettings.appearance)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.appearance = value;
+							this.plugin.settings.vaultSyncSettings.appearance = value;
 							await this.plugin.saveSettings();
 						}))
 			})
@@ -155,9 +160,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Hotkeys`)
 					.setDesc(`Sync custom hotkeys.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.hotkeys)
+						.setValue(this.plugin.settings.vaultSyncSettings.hotkeys)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.hotkeys = value;
+							this.plugin.settings.vaultSyncSettings.hotkeys = value;
 							await this.plugin.saveSettings();
 						}))
 			})
@@ -166,9 +171,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Active core plugins`)
 					.setDesc(`Sync which core plugins are enabled.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.activeCorePlugins)
+						.setValue(this.plugin.settings.vaultSyncSettings.activeCorePlugins)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.activeCorePlugins = value;
+							this.plugin.settings.vaultSyncSettings.activeCorePlugins = value;
 							await this.plugin.saveSettings();
 						}))
 			})
@@ -177,9 +182,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Core plugins settings`)
 					.setDesc(`Sync core plugins settings.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.corePluginSettings)
+						.setValue(this.plugin.settings.vaultSyncSettings.corePluginSettings)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.corePluginSettings = value;
+							this.plugin.settings.vaultSyncSettings.corePluginSettings = value;
 							await this.plugin.saveSettings();
 						}))
 			})
@@ -188,9 +193,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Active community plugins`)
 					.setDesc(`Sync which community plugins are enabled.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.activeCommunityPlugins)
+						.setValue(this.plugin.settings.vaultSyncSettings.activeCommunityPlugins)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.activeCommunityPlugins = value;
+							this.plugin.settings.vaultSyncSettings.activeCommunityPlugins = value;
 							await this.plugin.saveSettings();
 						}))
 			})
@@ -199,9 +204,9 @@ export class AwanSettingTab extends PluginSettingTab {
 					.setName(`Community plugins settings`)
 					.setDesc(`Sync community plugin settings.`)
 					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.vaultSettings.communityPluginSettings)
+						.setValue(this.plugin.settings.vaultSyncSettings.communityPluginSettings)
 						.onChange(async (value: boolean) => {
-							this.plugin.settings.vaultSettings.communityPluginSettings = value;
+							this.plugin.settings.vaultSyncSettings.communityPluginSettings = value;
 							await this.plugin.saveSettings();
 						}))
 			})

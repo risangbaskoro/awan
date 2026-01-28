@@ -1,11 +1,11 @@
 import { Menu, Notice, Plugin, setIcon, setTooltip, moment } from 'obsidian';
-import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSettings } from './settings';
+import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG, S3Filesystem } from './filesystems/s3';
 import sync from './commands/sync';
 
 /** The default vault sync settings. */
-const DEFAULT_VAULT_SETTINGS: VaultSettings = {
+const DEFAULT_VAULT_SETTINGS: VaultSyncSettings = {
 	main: true,
 	appearance: true,
 	themes: true,
@@ -29,9 +29,12 @@ const DEFAULT_SELECTIVE_SYNC_SETTINGS: SelectiveSyncSettings = {
 /** The default Awan plugin settings. */
 const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	password: '',
-	syncInterval: 5 * 60000,
+	scheduledSync: {
+		enabled: false,
+		interval: 5 * 60000,
+	},
 	serviceType: 's3',
-	vaultSettings: DEFAULT_VAULT_SETTINGS,
+	vaultSyncSettings: DEFAULT_VAULT_SETTINGS,
 	selectiveSync: DEFAULT_SELECTIVE_SYNC_SETTINGS,
 	s3: DEFAULT_S3_CONFIG,
 }
