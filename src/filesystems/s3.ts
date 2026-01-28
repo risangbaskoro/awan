@@ -20,11 +20,11 @@ import { buildQueryString } from "@smithy/querystring-builder"
 import { type S3Config } from "../types"
 import { DEFAULT_CONTENT_TYPE } from "../utils/constants";
 import PQueue from "p-queue";
-import { bufferToArrayBuffer, getDirectoryLevels } from "../utils/functions";
+import { bufferToArrayBuffer, concatUint8Arrays, getDirectoryLevels } from "../utils/functions";
 import { Upload } from "@aws-sdk/lib-storage";
 // @ts-ignore
 import * as mime from "mime-types";
-import { Readable } from "stream"; // eslint-disable-line
+
 
 export const DEFAULT_S3_CONFIG: S3Config = {
 	accessKeyId: "",
@@ -664,22 +664,41 @@ function fromS3ObjectToEntity(
  * @param body The Body of GetObject
  * @returns Promise<ArrayBuffer>
  */
-async function getObjectBodyToArrayBuffer(body: Readable | ReadableStream | Blob | undefined): Promise<ArrayBuffer> {
+async function getObjectBodyToArrayBuffer(body: unknown): Promise<ArrayBuffer> {
 	if (body === undefined) {
 		throw Error(`ObjectBody is undefined and don't know how to deal with it`);
 	}
-	if (body instanceof Readable) {
+	
+	// Handle AWS SDK v3 streaming types that may have transformToByteArray method
+	const bodyAsSdkStream = body as { transformToByteArray?: () => Promise<Uint8Array> };
+	if (typeof bodyAsSdkStream.transformToByteArray === 'function') {
+		const byteArray = await bodyAsSdkStream.transformToByteArray();
+		return bufferToArrayBuffer(byteArray) as ArrayBuffer;
+	}
+	
+	// Handle browser ReadableStream
+	if (body instanceof ReadableStream) {
+		return await new Response(body, {}).arrayBuffer();
+	}
+	
+	// Handle Blob
+	if (body instanceof Blob) {
+		return await body.arrayBuffer();
+	}
+	
+	// Handle Node.js-like streams (fallback for edge cases)
+	const bodyAsStream = body as { on?: (event: string, callback: (data?: unknown) => void) => void };
+	if (body && typeof bodyAsStream.on === 'function') {
 		return await new Promise((resolve, reject) => {
 			const chunks: Uint8Array[] = [];
-			body.on("data", (chunk: Uint8Array) => chunks.push(chunk));
-			body.on("error", reject);
-			body.on("end", () => resolve(bufferToArrayBuffer(Buffer.concat(chunks)) as ArrayBuffer)); // eslint-disable-line
+			bodyAsStream.on!("data", (chunk: Uint8Array) => chunks.push(chunk));
+			bodyAsStream.on!("error", reject);
+			bodyAsStream.on!("end", () => {
+				const concatenated = concatUint8Arrays(chunks);
+				resolve(bufferToArrayBuffer(concatenated) as ArrayBuffer);
+			});
 		});
-	} else if (body instanceof ReadableStream) {
-		return await new Response(body, {}).arrayBuffer();
-	} else if (body instanceof Blob) {
-		return await body.arrayBuffer();
-	} else {
-		throw TypeError(`The type of ${body as string} is not one of the supported types`);
 	}
+	
+	throw TypeError(`The body type is not supported: ${typeof body}`);
 };

@@ -2,10 +2,27 @@
  * Converts buffer or buffer like object to ArrayBuffer.
  */
 export function bufferToArrayBuffer(
-	buffer: Buffer | Uint8Array | ArrayBufferView // eslint-disable-line
+	buffer: Uint8Array | ArrayBufferView
 ): ArrayBuffer | ArrayBufferLike {
 	return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 };
+
+/**
+ * Concatenates multiple Uint8Arrays into a single Uint8Array.
+ * Browser-compatible replacement for Buffer.concat().
+ */
+export function concatUint8Arrays(arrays: Uint8Array[]): Uint8Array {
+	const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+	const result = new Uint8Array(totalLength);
+	let offset = 0;
+	
+	for (const arr of arrays) {
+		result.set(arr, offset);
+		offset += arr.length;
+	}
+	
+	return result;
+}
 
 
 /**

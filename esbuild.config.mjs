@@ -1,6 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 
 const banner =
 `/*
@@ -31,14 +33,37 @@ const context = await esbuild.context({
 		"@lezer/common",
 		"@lezer/highlight",
 		"@lezer/lr",
-		...builtinModules],
+		...builtinModules
+	],
 	format: "cjs",
 	target: "es2018",
+	platform: "browser",
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	define: {
+		"process.env.NODE_ENV": JSON.stringify(prod ? "production" : "development"),
+		"global": "window",
+	},
+	plugins: [
+		NodeGlobalsPolyfillPlugin({
+			process: true,
+			buffer: true,
+		}),
+		NodeModulesPolyfillPlugin({
+			modules: {
+				'events': true,
+				'stream': true,
+				'util': true,
+				'crypto': 'empty',
+				'fs': 'empty',
+				'path': 'empty',
+				'os': 'empty',
+			}
+		})
+	],
 });
 
 if (prod) {
