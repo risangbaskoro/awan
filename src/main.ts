@@ -2,6 +2,7 @@ import { Menu, Notice, Plugin, setIcon, setTooltip, moment } from 'obsidian';
 import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG, S3Filesystem } from './filesystems/s3';
+import sync from './commands/sync';
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSettings = {
@@ -53,8 +54,8 @@ export default class Awan extends Plugin {
 		this.addSettingTab(new AwanSettingTab(this.app, this));
 
 		this.updateStatus();
-		this.updateStatusBar();
-		this.markIsSyncing(false);
+		this.registerStatusBar();
+		await this.markIsSyncing(false);
 
 		console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
@@ -63,35 +64,12 @@ export default class Awan extends Plugin {
 	onunload() {
 	}
 
-	async runSync() {
-		let notice = new Notice('Syncing files.', 0);
-		await this.markIsSyncing(true);
-
-		try {
-			// TODO: Syncing process.
-			const client = new S3Filesystem(this.app, this.settings.s3);
-			await client.testConnection();
-
-			this.updateLastSynced();
-			this.updateStatus(SyncStatus.SUCCESS);
-			new Notice(`Successfully synced files.`)
-		} catch (err) {
-			// TODO: Catch error.
-			new Notice(`Failed to sync. ${err as string}`);
-			this.updateStatus(SyncStatus.ERROR);
-		} finally {
-			notice.hide();
-			await this.markIsSyncing(false);
-			this.updateStatusBar();
-		}
-	}
-
 	registerCommands() {
 		this.addCommand({
 			id: 'sync',
 			name: 'Sync',
 			callback: async () => {
-				await this.runSync();
+				await sync(this);
 			}
 		});
 
@@ -104,38 +82,38 @@ export default class Awan extends Plugin {
 		})
 	}
 
+	registerStatusBar() {
+		this.statusBarElement = this.addStatusBarItem();
+		this.statusBarElement.addClass('mod-clickable');
+		const segment = this.statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] })
+		this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] })
+
+		// Register status bar menu on click.
+		this.statusBarElement.onClickEvent((ev: MouseEvent) => {
+			const menu = new Menu();
+			menu.addItem(item => item
+				.setDisabled(this.isSyncing)
+				.setTitle(`Awan Sync: ${this.status}`)
+				.onClick(async () => {
+					await sync(this);
+				})
+			);
+			menu.addSeparator();
+			menu.addItem(item => item
+				.setTitle('Settings')
+				.onClick(() => {
+					// Open the plugin settings tab using the app's internal API
+					// @ts-ignore
+					this.app.setting.open(); // eslint-disable-line
+					// @ts-ignore
+					this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
+				})
+			);
+			menu.showAtMouseEvent(ev);
+		})
+	}
+
 	updateStatusBar() {
-		if (!this.statusBarElement) {
-			this.statusBarElement = this.addStatusBarItem();
-			this.statusBarElement.addClass('mod-clickable')
-			const segment = this.statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] })
-			this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'sync-status-icon'] })
-
-			// Register status bar menu on click.
-			this.statusBarElement.onClickEvent((ev: MouseEvent) => {
-				const menu = new Menu();
-				menu.addItem(item => item
-					.setDisabled(this.isSyncing)
-					.setTitle(`Awan Sync: ${this.status}`)
-					.onClick(async () => {
-						await this.runSync();
-					})
-				);
-				menu.addSeparator();
-				menu.addItem(item => item
-					.setTitle('Settings')
-					.onClick(() => {
-						// Open the plugin settings tab using the app's internal API
-						// @ts-ignore
-						this.app.setting.open(); // eslint-disable-line
-						// @ts-ignore
-						this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
-					})
-				);
-				menu.showAtMouseEvent(ev);
-			})
-		}
-
 		setTooltip(this.statusBarElement, this.status, { placement: "top" });
 		if (this.isSyncing) {
 			setIcon(this.statusBarIcon, 'refresh-cw');
