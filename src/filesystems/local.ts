@@ -2,7 +2,7 @@ import { App, normalizePath, TFile, TFolder } from "obsidian";
 import { Entity, Filesystem } from "./abstract";
 import { getDirectoryLevels, statFix } from "../utils/functions";
 
-export class LocalFileSystem extends Filesystem {
+export class LocalFilesystem extends Filesystem {
     constructor(app: App) {
         super(app, 'local');
     }
