@@ -1,10 +1,11 @@
 import { Entity } from "filesystems/abstract";
 import { FileFilter } from "./abstract";
+import Awan from "main";
 
 export class VaultCorePluginSettingsFilter extends FileFilter {
 	private excludedFiles: Set<string>;
 
-	constructor(plugin: any) {
+	constructor(plugin: Awan) {
 		super(plugin);
 		const configDir = this.plugin.app.vault.configDir;
 		this.excludedFiles = new Set([
