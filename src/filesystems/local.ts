@@ -8,6 +8,48 @@ export class LocalFilesystem extends Filesystem {
     }
     async walk(): Promise<Entity[]> {
         const entities: Entity[] = [];
+
+        // Walk config directory
+        const configDir = this.app.vault.configDir;
+        const processDir = async (dir: string) => {
+            const result = await this.app.vault.adapter.list(dir);
+
+            for (const folder of result.folders) {
+                // Add folder entity
+                const folderKey = `${folder}/`;
+                entities.push({
+                    key: folderKey,
+                    keyRaw: folderKey,
+                    size: 0,
+                    sizeRaw: 0
+                });
+
+                // Skip for dev folders.
+                // TODO: More elegant way?
+                if (folder.contains('plugins') && !(
+                    folder.contains('.git') ||
+                    folder.contains('node_modules')
+                )) {
+                    await processDir(folder);
+                }
+            }
+
+            for (const file of result.files) {
+                const stat = await statFix(this.app.vault, file);
+                if (!stat) continue;
+
+                entities.push({
+                    key: file,
+                    keyRaw: file,
+                    size: stat.size,
+                    sizeRaw: stat.size,
+                    clientMTime: stat.mtime,
+                    serverMTime: stat.mtime
+                });
+            }
+        };
+        await processDir(configDir);
+
         const localTAbstractFiles = this.app.vault.getAllLoadedFiles();
 
         for (const entry of localTAbstractFiles) {
