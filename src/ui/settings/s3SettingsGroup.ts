@@ -37,7 +37,7 @@ export class S3SettingsGroup extends SettingGroup {
                         .setPlaceholder('https://bucketname.s3.region.amazonaws.com')
                         .setValue(this.plugin.settings.s3.endpoint ?? "")
                         .onChange(async (value: string) => {
-                            this.plugin.settings.s3.endpoint = value ? value : undefined;
+                            this.plugin.settings.s3.endpoint = value;
                             await this.plugin.saveSettings();
                         }))
             })
@@ -48,7 +48,7 @@ export class S3SettingsGroup extends SettingGroup {
                         .setPlaceholder('Region')
                         .setValue(this.plugin.settings.s3.region ?? "")
                         .onChange(async (value: string) => {
-                            this.plugin.settings.s3.region = value ? value : undefined;
+                            this.plugin.settings.s3.region = value;
                             await this.plugin.saveSettings();
                         }))
             })
@@ -59,7 +59,7 @@ export class S3SettingsGroup extends SettingGroup {
                         .setPlaceholder('Bucket')
                         .setValue(this.plugin.settings.s3.bucket ?? "")
                         .onChange(async (value: string) => {
-                            this.plugin.settings.s3.bucket = value ? value : undefined;
+                            this.plugin.settings.s3.bucket = value;
                             await this.plugin.saveSettings();
                         }))
             })

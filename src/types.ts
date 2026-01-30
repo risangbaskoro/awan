@@ -11,11 +11,11 @@ export enum SyncStatus {
 export type SupportedServiceType = 's3';
 
 export const S3ConfigSchema = z.object({
-	accessKeyId: z.string().exactOptional(),
-	secretAccessKey: z.string().exactOptional(),
-	endpoint: z.string().exactOptional(),
-	region: z.string().exactOptional(),
-	bucket: z.string().exactOptional(),
+	accessKeyId: z.string().min(1).exactOptional(),
+	secretAccessKey: z.string().min(1).exactOptional(),
+	endpoint: z.string().min(1),
+	region: z.string().min(1),
+	bucket: z.string().min(1),
 	partsConcurrency: z.number().optional(),
 	forcePathStyle: z.boolean(),
 	remotePrefix: z.string().optional(),

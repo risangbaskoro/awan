@@ -63,10 +63,10 @@ export default class Awan extends Plugin {
 		this.database = new Database(this.app);
 
 		this.registerCommands();
-		this.addSettingTab(new AwanSettingTab(this.app, this));
-
-		this.updateStatus();
 		this.registerStatusBar();
+
+		this.addSettingTab(new AwanSettingTab(this.app, this));
+		this.updateStatus();
 
 		// Updates the status whenever a file is changed.
 		this.registerEvent(this.app.vault.on('modify', (_file) => {
@@ -221,8 +221,6 @@ export default class Awan extends Plugin {
 	 * This function optionally register status bar if not exists.
 	 */
 	updateStatusBar() {
-		this.registerStatusBar();
-
 		setTooltip(this.statusBarElement, this.status, { placement: "top" });
 		switch (this.status) {
 			case SyncStatus.UNINITIALIZED:
