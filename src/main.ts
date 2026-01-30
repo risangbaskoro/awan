@@ -1,4 +1,4 @@
-import { Menu, Plugin, setIcon, setTooltip, moment } from 'obsidian';
+import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile } from 'obsidian';
 import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
@@ -68,11 +68,15 @@ export default class Awan extends Plugin {
 		this.addSettingTab(new AwanSettingTab(this.app, this));
 		this.updateStatus();
 
-		// Updates the status whenever a file is changed.
-		this.registerEvent(this.app.vault.on('modify', (_file) => {
+		// Updates the status whenever a file is created, modified, renamed, or deleted.
+		const fileEventCallback = (_file: TAbstractFile) => {
 			if (this.status === SyncStatus.ERROR) return;
 			this.updateStatus();
-		}));
+		};
+		this.registerEvent(this.app.vault.on('create', fileEventCallback));
+		this.registerEvent(this.app.vault.on('modify', fileEventCallback));
+		this.registerEvent(this.app.vault.on('rename', fileEventCallback));
+		this.registerEvent(this.app.vault.on('delete', fileEventCallback));
 
 		if (!Awan.isProduction()) console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
