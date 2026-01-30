@@ -93,7 +93,7 @@ export default class Awan extends Plugin {
 			id: `sync`,
 			name: `Sync`,
 			checkCallback: (checking: boolean) => {
-				if (S3ConfigSchema.safeParse(this.settings.s3).success) {
+				if (this.validateServiceSettings()) {
 					if (!checking) void sync(this);
 					return true;
 				}
@@ -105,7 +105,7 @@ export default class Awan extends Plugin {
 			id: `test-connection`,
 			name: `Test connection`,
 			checkCallback: (checking: boolean) => {
-				if (S3ConfigSchema.safeParse(this.settings.s3).success) {
+				if (this.validateServiceSettings()) {
 					if (!checking) void testConnection(this);
 					return true;
 				}
@@ -117,7 +117,7 @@ export default class Awan extends Plugin {
 			id: `setup`,
 			name: `Set up remote sync`,
 			checkCallback: (checking: boolean) => {
-				if (!(S3ConfigSchema.safeParse(this.settings.s3).success)) {
+				if (!(this.validateServiceSettings())) {
 					if (!checking) this.openSettingsTab();
 					return true;
 				}
@@ -196,19 +196,7 @@ export default class Awan extends Plugin {
 			return;
 		}
 
-		// Check if initialized.
-		const serviceType = this.settings.serviceType;
-		const serviceSettings = this.settings[serviceType];
-
-		let schema;
-		switch (serviceType) {
-			case 's3': schema = S3ConfigSchema;
-				break;
-			default: schema = S3ConfigSchema;
-				break;
-		}
-
-		if (!(schema.safeParse(serviceSettings).success)) {
+		if (!this.validateServiceSettings()) {
 			this.updateStatus(SyncStatus.UNINITIALIZED);
 		} else {
 			this.updateStatus(SyncStatus.IDLE);
@@ -286,6 +274,27 @@ export default class Awan extends Plugin {
 		this.app.setting.open(); // eslint-disable-line
 		// @ts-ignore
 		this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
+	}
+
+	/**
+	 * Check the validity of the service settings.
+	 * 
+	 * @returns True if the settings are valid.
+	 */
+	validateServiceSettings(): boolean {
+		// Check if initialized.
+		const serviceType = this.settings.serviceType;
+		const serviceSettings = this.settings[serviceType];
+
+		let schema;
+		switch (serviceType) {
+			case 's3': schema = S3ConfigSchema;
+				break;
+			default: schema = S3ConfigSchema;
+				break;
+		}
+
+		return schema.safeParse(serviceSettings).success
 	}
 
 	/**
