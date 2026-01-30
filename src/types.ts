@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export enum SyncStatus {
 	UNINITIALIZED = 'Unintialized',
+	UNVALIDATED = 'Unvalidated',
 	IDLE = 'Idle',
 	SYNCING = 'Syncing',
 	SUCCESS = 'Synced',

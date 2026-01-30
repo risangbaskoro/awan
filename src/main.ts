@@ -147,7 +147,7 @@ export default class Awan extends Plugin {
 		this.statusBarElement.onClickEvent((ev: MouseEvent) => {
 			const menu = new Menu();
 			menu.addItem(item => item
-				.setDisabled(this.isSyncing)
+				.setDisabled(this.isSyncing || this.status === SyncStatus.UNINITIALIZED)
 				.setTitle(`${this.manifest.name}: ${this.status}`)
 				.onClick(() => sync(this))
 			);
@@ -180,6 +180,9 @@ export default class Awan extends Plugin {
 				case SyncStatus.UNINITIALIZED:
 					this.markIsSyncing(false);
 					break;
+				case SyncStatus.UNVALIDATED:
+					this.markIsSyncing(false);
+					break;
 				case SyncStatus.IDLE:
 					this.markIsSyncing(false);
 					break;
@@ -200,11 +203,19 @@ export default class Awan extends Plugin {
 			return;
 		}
 
+		// Check if the remote config is valid.
 		if (!this.validateServiceSettings()) {
 			this.updateStatus(SyncStatus.UNINITIALIZED);
-		} else {
-			this.updateStatus(SyncStatus.IDLE);
+			return;
 		}
+
+		// Check if the remote config is not yet validated.
+		if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(this.status)) {
+			this.updateStatus(SyncStatus.UNVALIDATED);
+			return;
+		}
+
+		this.updateStatus(SyncStatus.IDLE);
 	}
 
 	/**
@@ -218,6 +229,10 @@ export default class Awan extends Plugin {
 			case SyncStatus.UNINITIALIZED:
 				setIcon(this.statusBarIcon, 'cloud-off');
 				this.setStatusBarIconColor('warning');
+				break;
+			case SyncStatus.UNVALIDATED:
+				setIcon(this.statusBarIcon, 'cloud-cog');
+				this.setStatusBarIconColor();
 				break;
 			case SyncStatus.IDLE:
 				setIcon(this.statusBarIcon, 'cloud');

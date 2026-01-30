@@ -11,13 +11,20 @@ export default async function testConnection(plugin: Awan) {
         const client = new S3Filesystem(plugin.app, plugin.settings.s3);
         await client.testConnection();
 
-        plugin.updateStatus(SyncStatus.IDLE);
+        if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(plugin.status)) {
+            plugin.updateStatus(SyncStatus.IDLE);
+        }
+
         const resultNotice = new Notice(`Connected with connection ${plugin.settings.serviceType}.`);
         resultNotice.containerEl.addClass('mod-success');
     } catch (err) {
         const resultNotice = new Notice(`Failed to connect to remote. Check your settings or internet connection. ${err as string}`);
         resultNotice.containerEl.addClass('mod-warning');
-        plugin.updateStatus(SyncStatus.UNINITIALIZED);
+        if (plugin.validateServiceSettings()) {
+            plugin.updateStatus(SyncStatus.ERROR);
+        } else {
+            plugin.updateStatus(SyncStatus.UNINITIALIZED);
+        }
     } finally {
         notice.hide();
     }
