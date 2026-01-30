@@ -57,7 +57,7 @@ export default class Awan extends Plugin {
 	 * Setup when the plugin loads.
 	 */
 	async onload() {
-		console.debug(`${this.manifest.id}: Initializing...`);
+		if (!Awan.isProduction()) console.debug(`${this.manifest.id}: Initializing...`);
 		await this.loadSettings();
 
 		this.database = new Database(this.app);
@@ -74,7 +74,7 @@ export default class Awan extends Plugin {
 			this.updateStatus();
 		}));
 
-		console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
+		if (!Awan.isProduction()) console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
 
 	/** 
@@ -301,6 +301,13 @@ export default class Awan extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 		this.updateStatus();
+	}
+
+	/**
+	 * Determine if the plugin is in production mode.
+	 */
+	static isProduction(): boolean {
+		return process.env.NODE_ENV === "production"; // eslint-disable-line
 	}
 }
 
