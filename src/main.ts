@@ -115,7 +115,7 @@ export default class Awan extends Plugin {
 
 		this.addCommand({
 			id: `setup`,
-			name: `Set up remote`,
+			name: `Set up remote sync`,
 			checkCallback: (checking: boolean) => {
 				if (!(S3ConfigSchema.safeParse(this.settings.s3).success)) {
 					if (!checking) this.openSettingsTab();
