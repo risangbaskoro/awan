@@ -1,4 +1,4 @@
-import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile } from 'obsidian';
+import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice } from 'obsidian';
 import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
@@ -85,6 +85,11 @@ export default class Awan extends Plugin {
 	 * Teardown when the plugin unloads. 
 	 */
 	onunload() {
+	}
+
+	onExternalSettingsChange() {
+		this.loadSettings();
+		new Notice(`Awan settings has been modified externally. Settings has been reloaded.`);
 	}
 
 	/**
