@@ -1,5 +1,5 @@
 import Awan from "main";
-import { App, Modal, setIcon, TFolder } from "obsidian";
+import { Modal, App, setIcon, TFolder } from "obsidian";
 
 interface FolderNode {
     folder: TFolder;
@@ -8,6 +8,7 @@ interface FolderNode {
 }
 
 /** Modal to configure excluded folders. */
+
 export class ExcludedFoldersModal extends Modal {
     private excludedFolders: Set<string> = new Set();
     private folderList: HTMLElement;
@@ -34,14 +35,14 @@ export class ExcludedFoldersModal extends Modal {
 
         // Add buttons at the bottom
         const buttonContainer = contentEl.createDiv('awan-modal-button-container');
-        
-        const cancelButton = buttonContainer.createEl('button', { 
+
+        const cancelButton = buttonContainer.createEl('button', {
             text: 'Cancel',
             cls: 'mod-cancel'
         });
         cancelButton.onclick = () => this.close();
 
-        const saveButton = buttonContainer.createEl('button', { 
+        const saveButton = buttonContainer.createEl('button', {
             text: 'Save',
             cls: 'mod-cta'
         });
@@ -72,7 +73,7 @@ export class ExcludedFoldersModal extends Modal {
         folders.forEach(folder => {
             const node = folderMap.get(folder.path)!;
             const parentPath = folder.path.includes('/') ? folder.path.substring(0, folder.path.lastIndexOf('/')) : '';
-            
+
             if (parentPath && folderMap.has(parentPath)) {
                 folderMap.get(parentPath)!.children.push(node);
             } else {
