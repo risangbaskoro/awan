@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
+import { copyFileSync, existsSync } from "fs";
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 
@@ -12,6 +13,23 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === "production");
+
+const copyStaticFiles = {
+	name: "copy-static-files",
+	setup(build) {
+		build.onEnd(() => {
+			[
+				"manifest.json",
+				"styles.css",
+				".hotreload"
+			].forEach(file => {
+				if (existsSync(file)) {
+					copyFileSync(file, `dist/${file}`);
+				}
+			});
+		});
+	},
+};
 
 const context = await esbuild.context({
 	banner: {
@@ -41,13 +59,14 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	outfile: "main.js",
+	outdir: "dist",
 	minify: prod,
 	define: {
 		"process.env.NODE_ENV": JSON.stringify(prod ? "production" : "development"),
 		"global": "window",
 	},
 	plugins: [
+		copyStaticFiles,
 		NodeGlobalsPolyfillPlugin({
 			process: true,
 			buffer: true,
