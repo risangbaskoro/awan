@@ -105,9 +105,9 @@ export class LocalFilesystem extends Filesystem {
     async stat(key: string): Promise<Entity> {
         const statResult = await statFix(this.app.vault, key);
         if (statResult === undefined || statResult === null) {
-            throw Error(`${key} does not exist! cannot stat for local`);
+            throw Error(`${key} does not exist! Cannot stat for local`);
         }
-        const entityKey = statResult.type === "folder" ? `${key}/` : key;
+        const entityKey = statResult.type === "folder" ? `${normalizePath(key)}/` : normalizePath(key);
         return {
             key: entityKey,
             keyRaw: entityKey,
