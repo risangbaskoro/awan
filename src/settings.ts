@@ -105,14 +105,13 @@ export class AwanSettingTab extends PluginSettingTab {
 				})
 		}
 
-		// Vault settings.
-		// this.displayVaultConfig(containerEl);
-		new VaultSyncSettingsGroup(containerEl, this.app, this.plugin)
-			.setHeading(`Vault configuration`);
-
 		// Selective sync settings.
 		new SelectiveSyncSettingsGroup(containerEl, this.app, this.plugin)
 			.setHeading(`Selective sync`);
+
+		// Vault settings.
+		new VaultSyncSettingsGroup(containerEl, this.app, this.plugin)
+			.setHeading(`Vault configuration`);
 
 		// Remote storage settings.
 		new S3SettingsGroup(containerEl, this.app, this.plugin)
