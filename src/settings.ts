@@ -4,6 +4,7 @@ import type { S3Config, SupportedServiceType } from "./types";
 import { S3SettingsGroup } from "ui/settings/s3SettingsGroup";
 import { SelectiveSyncSettingsGroup } from "ui/settings/selectiveSyncSettingsGroup";
 import { VaultSyncSettingsGroup } from "ui/settings/vaultSyncSettingsGroup";
+import { DebugSettingsGroup } from "ui/settings/debugSettingsGroup";
 
 /** Settings enable sync vault settings. */
 export interface VaultSyncSettings {
@@ -115,5 +116,11 @@ export class AwanSettingTab extends PluginSettingTab {
 		// Remote storage settings.
 		new S3SettingsGroup(containerEl, this.app, this.plugin)
 			.setHeading(`S3 configuration`);
+
+		// Debug settings group.
+		if (Awan.isDevelopment()) {
+			new DebugSettingsGroup(containerEl, this.app, this.plugin)
+				.setHeading(`Debug`);
+		}
 	}
 }
