@@ -332,10 +332,24 @@ export default class Awan extends Plugin {
 	}
 
 	/**
+	 * Return string representation of the current environment.
+	 */
+	static environment(): string {
+		return process.env.NODE_ENV as string; // eslint-disable-line
+	}
+
+	/**
 	 * Determine if the plugin is in production mode.
 	 */
 	static isProduction(): boolean {
-		return process.env.NODE_ENV === "production"; // eslint-disable-line
+		return this.environment() === "production";
+	}
+
+	/**
+	 * Determine if the plugin is in development mode.
+	 */
+	static isDevelopment(): boolean {
+		return !this.isProduction();
 	}
 }
 
