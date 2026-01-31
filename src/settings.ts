@@ -76,7 +76,6 @@ export class AwanSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		const generalSettings = new SettingGroup(containerEl)
-			.setHeading(`General`)
 			.addSetting(setting => {
 				setting
 					.setName('Auto sync')
