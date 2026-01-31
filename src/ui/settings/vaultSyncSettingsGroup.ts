@@ -28,6 +28,7 @@ export class VaultSyncSettingsGroup extends SettingGroup {
                         .setValue(this.plugin.settings.vaultSyncSettings.appearance)
                         .onChange(async (value: boolean) => {
                             this.plugin.settings.vaultSyncSettings.appearance = value;
+                            this.plugin.settings.vaultSyncSettings.themes = value;
                             await this.plugin.saveSettings();
                         }))
             })
