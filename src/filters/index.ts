@@ -6,6 +6,8 @@ import { ExcludedFolderFilter } from './excludedFolderFilter';
 import { ImageFilter } from './imageFilter';
 import { OtherFilter } from './otherFilter';
 import { PdfFilter } from './pdfFilter';
+import { VideoFilter } from './videoFilter';
+
 import { VaultActiveCommunityPluginsFilter } from './vaultActiveCommunityPluginsFilter';
 import { VaultActiveCorePluginsFilter } from './vaultActiveCorePluginsFilter';
 import { VaultAppearanceSettingsFilter } from './vaultAppearanceSettingsFilter';
@@ -13,8 +15,6 @@ import { VaultCommunityPluginSettingsFilter } from './vaultCommunityPluginSettin
 import { VaultCorePluginSettingsFilter } from './vaultCorePluginSettingsFilter';
 import { VaultHotkeysSettingsFilter } from './vaultHotkeysSettingsFilter';
 import { VaultMainSettingsFilter } from './vaultMainSettingsFilter';
-import { VideoFilter } from './videoFilter';
-import { DotfilesFilter } from './dotFilesFilter';
 
 export * from './audioFilter';
 export * from './excludedFolderFilter';
@@ -45,7 +45,6 @@ export class FinalFileFilter extends FileFilter {
             new OtherFilter(plugin),
             new ExcludedFolderFilter(plugin),
 
-            // new DotfilesFilter(plugin),
             new VaultMainSettingsFilter(plugin),
             new VaultAppearanceSettingsFilter(plugin),
             new VaultHotkeysSettingsFilter(plugin),

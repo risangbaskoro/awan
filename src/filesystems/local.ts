@@ -36,6 +36,7 @@ export class LocalFilesystem extends Filesystem {
 
             for (const file of result.files) {
                 const stat = await statFix(this.app.vault, file);
+                if (file.contains('/.')) continue; // Ignore dotfiles
                 if (!stat) continue;
 
                 entities.push({
