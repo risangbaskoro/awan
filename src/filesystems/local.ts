@@ -1,4 +1,4 @@
-import { App, normalizePath, TFile, TFolder } from "obsidian";
+import { App, normalizePath, TFile, TFolder, moment } from "obsidian";
 import { Entity, Filesystem } from "./abstract";
 import { getDirectoryLevels, statFix } from "../utils/functions";
 
@@ -48,6 +48,13 @@ export class LocalFilesystem extends Filesystem {
                 });
             }
         };
+        // Insert Obsidian config dir (like `.obsidian`) too.
+        entities.push({
+            key: `${configDir}/`,
+            keyRaw: `${configDir}/`,
+            size: 0,
+            sizeRaw: 0
+        });
         await processDir(configDir);
 
         const localTAbstractFiles = this.app.vault.getAllLoadedFiles();
@@ -63,6 +70,7 @@ export class LocalFilesystem extends Filesystem {
                 continue;
             } else if (entry instanceof TFile) {
                 let localMTime: number | undefined = entry.stat.mtime;
+                let localCTime: number | undefined = entry.stat.ctime;
                 if (localMTime <= 0) {
                     localMTime = entry.stat.ctime;
                 }
@@ -79,6 +87,7 @@ export class LocalFilesystem extends Filesystem {
                     keyRaw: key,
                     size: entry.stat.size,
                     sizeRaw: entry.stat.size,
+                    clientCTime: localCTime,
                     clientMTime: localMTime,
                     serverMTime: localMTime,
                 };
@@ -116,9 +125,9 @@ export class LocalFilesystem extends Filesystem {
             clientCTime: statResult.ctime,
             clientMTime: statResult.mtime,
             serverMTime: statResult.mtime,
-            clientCTimeFormatted: window.moment(statResult.ctime).format(),
-            clientMTimeFormatted: window.moment(statResult.mtime).format(),
-            serverMTimeFormatted: window.moment(statResult.mtime).format(),
+            clientCTimeFormatted: moment(statResult.ctime).format(),
+            clientMTimeFormatted: moment(statResult.mtime).format(),
+            serverMTimeFormatted: moment(statResult.mtime).format(),
         };
     }
     async mkdir(key: string, mtime?: number, ctime?: number): Promise<Entity> {
