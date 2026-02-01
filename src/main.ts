@@ -1,4 +1,4 @@
-import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice } from 'obsidian';
+import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData } from 'obsidian';
 import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
@@ -77,6 +77,9 @@ export default class Awan extends Plugin {
 		this.registerEvent(this.app.vault.on('modify', fileEventCallback));
 		this.registerEvent(this.app.vault.on('rename', fileEventCallback));
 		this.registerEvent(this.app.vault.on('delete', fileEventCallback));
+
+		// TODO: Register protocol handler for importing config.
+		this.registerObsidianProtocolHandler(this.manifest.id, this.onUriCall);
 
 		if (!Awan.isProduction()) console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
@@ -319,6 +322,22 @@ export default class Awan extends Plugin {
 		}
 
 		return schema.safeParse(serviceSettings).success
+	}
+
+	private onUriCall(data: ObsidianProtocolData) {
+		// The protocol data should contains `import` query string
+		// or ObsidianProtocolData
+		// Example URL
+		// {
+		// 	"action": "awan"
+		// 	"import": "xxx",
+		// 	"X-Amz-Credential": "xxx",
+		// 	"X-Amz-Date": "xxx",
+		// 	"X-Amz-Expires": "xxx",
+		// 	"X-Amz-SignedHeaders": "xxx",
+		// 	"X-Amz-Signature": "xxx",
+		// }
+		console.debug(JSON.stringify(data['import']));
 	}
 
 	/**
