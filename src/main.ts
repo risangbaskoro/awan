@@ -90,8 +90,8 @@ export default class Awan extends Plugin {
 	onunload() {
 	}
 
-	onExternalSettingsChange() {
-		this.loadSettings();
+	async onExternalSettingsChange() {
+		await this.loadSettings();
 		new Notice(`Awan settings has been modified externally. Settings has been reloaded.`);
 	}
 
