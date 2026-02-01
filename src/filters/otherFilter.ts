@@ -28,7 +28,8 @@ export class OtherFilter extends FileFilter {
             this.videoFilter.evaluate(entity) ||
             this.pdfFilter.evaluate(entity) ||
             this.isObsidianFile(entity) ||
-            this.isFolder(entity)) {
+            this.isFolder(entity) ||
+            this.isInVaultConfigDir(entity)) {
             return false;
         }
 
@@ -48,5 +49,10 @@ export class OtherFilter extends FileFilter {
 
     private isFolder(entity: Entity): boolean {
         return entity.keyRaw.endsWith('/');
+    }
+
+    private isInVaultConfigDir(entity: Entity): boolean {
+        const configDir = this.plugin.app.vault.configDir;
+        return entity.keyRaw.startsWith(configDir);
     }
 }
