@@ -28,6 +28,16 @@ export class VaultSyncSettingsGroup extends SettingGroup {
                         .setValue(this.plugin.settings.vaultSyncSettings.appearance)
                         .onChange(async (value: boolean) => {
                             this.plugin.settings.vaultSyncSettings.appearance = value;
+                            await this.plugin.saveSettings();
+                        }))
+            })
+            .addSetting(setting => {
+                setting
+                    .setName(`Themes and snippets`)
+                    .setDesc(`Sync themes and snippets.`)
+                    .addToggle(toggle => toggle
+                        .setValue(this.plugin.settings.vaultSyncSettings.themes)
+                        .onChange(async (value: boolean) => {
                             this.plugin.settings.vaultSyncSettings.themes = value;
                             await this.plugin.saveSettings();
                         }))
