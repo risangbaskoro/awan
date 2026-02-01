@@ -11,7 +11,7 @@ export class DebugSettingsGroup extends SettingGroup {
                     .setName(`Clear previous sync cache`)
                     .setDesc(`Clearing the cache may break the sync algorithm. Use carefully.`)
                     .addButton(button => button
-                        .setWarning()
+                        .setClass('mod-destructive')
                         .setButtonText(`Clear`)
                         .onClick(async () => {
                             try {
