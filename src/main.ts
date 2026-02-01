@@ -79,7 +79,7 @@ export default class Awan extends Plugin {
 		this.registerEvent(this.app.vault.on('delete', fileEventCallback));
 
 		// TODO: Register protocol handler for importing config.
-		this.registerObsidianProtocolHandler(this.manifest.id, this.onUriCall);
+		this.registerObsidianProtocolHandler(this.manifest.id, (data: ObsidianProtocolData) => this.onUriCall(data));
 
 		if (!Awan.isProduction()) console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
