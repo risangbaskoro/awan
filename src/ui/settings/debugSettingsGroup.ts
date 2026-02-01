@@ -1,5 +1,5 @@
 import Awan from "main";
-import { App, SettingGroup } from "obsidian";
+import { App, Notice, SettingGroup } from "obsidian";
 
 export class DebugSettingsGroup extends SettingGroup {
     constructor(containerEl: HTMLElement, private app: App, private plugin: Awan) {
@@ -14,7 +14,13 @@ export class DebugSettingsGroup extends SettingGroup {
                         .setWarning()
                         .setButtonText(`Clear`)
                         .onClick(async () => {
-                            await this.plugin.database.previousSync.clear();
+                            try {
+                                await this.plugin.database.previousSync.clear();
+                                new Notice(`Previous sync cached cleared.`);
+                            } catch {
+                                const failedNotice = new Notice(`Failed to clear the previous sync cache.`);
+                                failedNotice.containerEl.addClass('mod-warning');
+                            }
                         }))
             })
     }
