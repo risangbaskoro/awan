@@ -22,5 +22,6 @@ export default async function sync(plugin: Awan) {
         const resultNotice = new Notice(`Failed to sync. ${err as string}`);
         resultNotice.containerEl.addClass('mod-warning');
         plugin.updateStatus(SyncStatus.ERROR);
+        throw err;
     }
 }

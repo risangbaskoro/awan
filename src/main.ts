@@ -30,11 +30,9 @@ const DEFAULT_SELECTIVE_SYNC_SETTINGS: SelectiveSyncSettings = {
 
 /** The default Awan plugin settings. */
 const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
+	enabled: true,
+	syncIntervalMs: 5 * 60000,
 	password: '',
-	scheduledSync: {
-		enabled: false,
-		interval: 5 * 60000,
-	},
 	serviceType: 's3',
 	vaultSyncSettings: DEFAULT_VAULT_SETTINGS,
 	selectiveSync: DEFAULT_SELECTIVE_SYNC_SETTINGS,
@@ -52,6 +50,7 @@ export default class Awan extends Plugin {
 	lastSynced: number;
 	statusBarElement: HTMLElement;
 	statusBarIcon: HTMLSpanElement;
+	autoSyncIntervalId: number | undefined;
 
 	/** 
 	 * Setup when the plugin loads.
@@ -78,6 +77,8 @@ export default class Awan extends Plugin {
 		this.registerEvent(this.app.vault.on('rename', fileEventCallback));
 		this.registerEvent(this.app.vault.on('delete', fileEventCallback));
 
+		await this.updateAutoSync();
+
 		// TODO: Register protocol handler for importing config.
 		this.registerObsidianProtocolHandler(this.manifest.id, (data: ObsidianProtocolData) => this.onUriCall(data));
 
@@ -88,11 +89,31 @@ export default class Awan extends Plugin {
 	 * Teardown when the plugin unloads. 
 	 */
 	onunload() {
+		if (this.autoSyncIntervalId !== undefined) {
+			window.clearInterval(this.autoSyncIntervalId);
+		}
 	}
 
 	async onExternalSettingsChange() {
 		await this.loadSettings();
-		new Notice(`Awan settings has been modified externally. Settings has been reloaded.`);
+		new Notice(`${this.manifest.name} settings has been modified externally. Settings has been reloaded.`);
+	}
+
+	async updateAutoSync() {
+		const { enabled, syncIntervalMs } = this.settings;
+
+		if (this.autoSyncIntervalId !== undefined) {
+			window.clearInterval(this.autoSyncIntervalId);
+			this.autoSyncIntervalId = undefined;
+		}
+
+		if (enabled) {
+			this.autoSyncIntervalId = window.setInterval(() => {
+				sync(this).catch((err) => {
+					console.error(`${this.manifest.id}: Sync failed.`, err);
+				});
+			}, syncIntervalMs);
+		}
 	}
 
 	/**
@@ -118,8 +139,11 @@ export default class Awan extends Plugin {
 			name: `Test connection`,
 			checkCallback: (checking: boolean) => {
 				if (this.validateServiceSettings()) {
-					if (!checking) void testConnection(this);
-					return true;
+					if (!checking) {
+						sync(this).catch((err) => {
+							console.error(`${this.manifest.id}: Sync failed.`, err);
+						});
+					}
 				}
 				return false;
 			},
@@ -130,8 +154,11 @@ export default class Awan extends Plugin {
 			name: `Set up remote sync`,
 			checkCallback: (checking: boolean) => {
 				if (!(this.validateServiceSettings())) {
-					if (!checking) this.openSettingsTab();
-					return true;
+					if (!checking) {
+						testConnection(this).catch((err) => {
+							console.error(`${this.manifest.id}: Test connection failed.`, err);
+						});
+					}
 				}
 				return false;
 			}

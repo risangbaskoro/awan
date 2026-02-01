@@ -1,4 +1,4 @@
-import { App, IconName, PluginSettingTab, SettingGroup } from "obsidian";
+import { App, debounce, IconName, PluginSettingTab, SettingGroup } from "obsidian";
 import Awan from "./main";
 import type { S3Config, SupportedServiceType } from "./types";
 import { S3SettingsGroup } from "ui/settings/s3SettingsGroup";
@@ -47,13 +47,10 @@ export interface AwanSettings {
 	serviceType: SupportedServiceType;
 	/** The key to password in Obsidian keychain for encryption. */
 	password: string;
-	/** Scheduled sync configuration. */
-	scheduledSync: {
-		/** Whether to enable scheduled sync. */
-		enabled?: boolean;
-		/** Sync interval in milliseconds. */
-		interval?: number;
-	};
+	/** Whether to enable scheduled sync. */
+	enabled?: boolean;
+	/* Sync interval in milliseconds. */
+	syncIntervalMs?: number;
 	/** Settings enable sync vault settings. */
 	vaultSyncSettings: VaultSyncSettings;
 	/** Settings to select which files in the vault to be synced. */
@@ -66,6 +63,12 @@ export class AwanSettingTab extends PluginSettingTab {
 	plugin: Awan;
 	icon: IconName = 'cloud';
 
+	private updateAutoSync = debounce(
+		async () => await this.plugin.updateAutoSync(),
+		1000,
+		true
+	);
+
 	constructor(app: App, plugin: Awan) {
 		super(app, plugin);
 		this.plugin = plugin;
@@ -73,33 +76,49 @@ export class AwanSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-
+		const { settings } = this.plugin;
 		containerEl.empty();
 
 		const generalSettings = new SettingGroup(containerEl)
 			.addSetting(setting => {
 				setting
-					.setName('Auto sync')
-					.addToggle(toggle => toggle
-						.setValue(this.plugin.settings.scheduledSync.enabled ?? false)
-						.onChange(async (value: boolean) => {
-							this.plugin.settings.scheduledSync.enabled = value;
+					.setName(`${this.plugin.manifest.name} status`)
+					.setDesc(`Awan is currently ${settings.enabled ? 'running' : 'paused'}.`)
+					.addButton((button) => button
+						.setButtonText(settings.enabled ? 'Pause' : 'Resume')
+						.onClick(async () => {
+							this.plugin.settings.enabled = !settings.enabled;
 							await this.plugin.saveSettings();
 							this.display();
-						}))
+							this.updateAutoSync();
+						})
+					)
 			});
-
-		if (this.plugin.settings.scheduledSync.enabled) {
+		if (this.plugin.settings.enabled) {
 			generalSettings
 				.addSetting(setting => {
 					setting
 						.setName('Sync interval (minutes)')
 						.setDesc('Scheduled sync interval in minutes.')
-						.addText(text => text
-							.setValue((Math.max(this.plugin.settings.scheduledSync.interval ?? 0, 0) / 60000).toString())
-							.onChange(async (value: string) => {
-								this.plugin.settings.scheduledSync.interval = Math.max(Number(value), 0) * 60000; // In convert to minutes
+						.addExtraButton(btn => btn
+							.setIcon('reset')
+							.onClick(async () => {
+								this.plugin.settings.syncIntervalMs = 60000 * 5;
 								await this.plugin.saveSettings();
+								this.display();
+								this.updateAutoSync();
+							})
+						)
+						.addSlider(slider => slider
+							.setLimits(1, 20, 1)
+							.setInstant(true)
+							.setDynamicTooltip()
+							.setValue(Math.max(this.plugin.settings.syncIntervalMs ?? 0, 5) / 60000)
+							.onChange(async (value: number) => {
+								const newInterval = Math.max(value, 1) * 60000; // In convert to minutes
+								this.plugin.settings.syncIntervalMs = newInterval;
+								await this.plugin.saveSettings();
+								this.updateAutoSync();
 							})
 						)
 				})

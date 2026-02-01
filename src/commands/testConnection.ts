@@ -25,6 +25,7 @@ export default async function testConnection(plugin: Awan) {
         } else {
             plugin.updateStatus(SyncStatus.UNINITIALIZED);
         }
+        throw err;
     } finally {
         notice.hide();
     }
