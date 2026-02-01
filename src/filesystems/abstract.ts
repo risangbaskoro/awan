@@ -31,6 +31,11 @@ export interface Entity {
 	serverMTimeFormatted?: string;
 	/** Etag for S3 bucket. */
 	etag?: string;
+	/** 
+	 * Determine if this entity is a synthesized folder.
+	 * Only used by S3.
+	 */
+	synthesizedFolder?: boolean;
 }
 
 /** 
