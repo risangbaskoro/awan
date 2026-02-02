@@ -69,6 +69,7 @@ export default class Awan extends Plugin {
 
 		// Updates the status whenever a file is created, modified, renamed, or deleted.
 		const fileEventCallback = (_file: TAbstractFile) => {
+			if (this.status === SyncStatus.SYNCING) return;
 			if (this.status === SyncStatus.ERROR) return;
 			this.updateStatus();
 		};
