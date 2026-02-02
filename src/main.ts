@@ -269,7 +269,7 @@ export default class Awan extends Plugin {
 	 * 
 	 * This function optionally register status bar if not exists.
 	 */
-	updateStatusBar() {
+	private updateStatusBar() {
 		setTooltip(this.statusBarElement, this.status, { placement: "top" });
 		switch (this.status) {
 			case SyncStatus.UNINITIALIZED:
