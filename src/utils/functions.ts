@@ -1,4 +1,4 @@
-import { Entity } from "filesystems/abstract";
+import { Entity } from "types";
 import { Vault } from "obsidian";
 import { SupportedServiceType } from "types";
 

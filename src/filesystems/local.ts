@@ -1,5 +1,6 @@
 import { App, normalizePath, TFile, TFolder, moment } from "obsidian";
-import { Entity, Filesystem } from "./abstract";
+import { Filesystem } from "./abstract";
+import { Entity } from "types";
 import { getDirectoryLevels, statFix } from "../utils/functions";
 
 export class LocalFilesystem extends Filesystem {

@@ -1,4 +1,4 @@
-import { Entity } from "filesystems/abstract";
+import { Entity } from "types";
 import localforage from "localforage";
 import { App } from "obsidian";
 export type LocalForage = typeof localforage;

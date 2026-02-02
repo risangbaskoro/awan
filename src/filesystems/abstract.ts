@@ -1,43 +1,10 @@
 import { App } from "obsidian";
-import type { SupportedServiceType } from "../types";
+import type { Entity, SupportedServiceType } from "../types";
 import { S3Filesystem } from "./s3";
 import { nanoid } from "nanoid";
 import type { AwanSettings } from "../types";
 import { isEqual } from "es-toolkit";
 import Awan from "main";
-
-/**
- * Entity is a file information.
- */
-export interface Entity {
-	/** Key regardless of encryption. */
-	key: string;
-	/** Original key. */
-	keyRaw: string;
-	/** Size regardelss of encryption. */
-	size: number;
-	/** Original size. */
-	sizeRaw: number;
-	/** Client creation time. */
-	clientCTime?: number;
-	/** Client modified time. */
-	clientMTime?: number;
-	/** Server modified time. */
-	serverMTime?: number;
-	/** Formatted client creation time. */
-	clientCTimeFormatted?: string;
-	/** Formatted client modified time. */
-	clientMTimeFormatted?: string;
-	/** Formatted server modified time. */
-	serverMTimeFormatted?: string;
-	/** Etag for S3 bucket. */
-	etag?: string;
-	/** 
-	 * Determine if this entity is a synthesized folder.
-	 * Only used by S3.
-	 */
-	synthesizedFolder?: boolean;
-}
 
 /** 
  * Awan filesystem class.

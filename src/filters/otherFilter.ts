@@ -1,4 +1,4 @@
-import { Entity } from "filesystems/abstract";
+import { Entity } from "types";
 import { FileFilter } from "./abstract";
 import { ImageFilter } from "./imageFilter";
 import { AudioFilter } from "./audioFilter";

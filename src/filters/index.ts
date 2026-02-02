@@ -1,4 +1,4 @@
-import { Entity } from 'filesystems/abstract';
+import { Entity } from "types";
 import { FileFilter } from './abstract';
 import Awan from 'main';
 import { AudioFilter } from './audioFilter';

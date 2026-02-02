@@ -1,4 +1,4 @@
-import { Entity } from "filesystems/abstract";
+import { Entity } from "types";
 import { FileFilter } from "./abstract";
 
 export class PdfFilter extends FileFilter {

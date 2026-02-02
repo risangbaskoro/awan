@@ -1,4 +1,5 @@
-import { Entity, Filesystem } from "filesystems/abstract";
+import { Filesystem } from "filesystems/abstract";
+import { Entity } from "types";
 import { LocalFilesystem } from "filesystems/local";
 import { S3Filesystem } from "filesystems/s3";
 import { FinalFileFilter } from "filters";

@@ -12,7 +12,8 @@ import {
 	S3ClientConfig
 } from "@aws-sdk/client-s3";
 import { App, requestUrl, RequestUrlParam } from "obsidian";
-import { Filesystem, Entity } from "./abstract";
+import { Filesystem } from "./abstract";
+import { Entity } from "types";
 import { FetchHttpHandler, FetchHttpHandlerOptions } from "@smithy/fetch-http-handler";
 import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { type HttpHandlerOptions } from "@smithy/types"
