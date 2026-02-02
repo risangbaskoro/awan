@@ -54,7 +54,6 @@ export default class Awan extends Plugin {
 	status!: SyncStatus;
 	isSyncing!: boolean;
 	lastSynced: number;
-	statusBarElement: HTMLElement;
 	statusBarIcon: HTMLSpanElement;
 	autoSyncIntervalId: number | undefined;
 
@@ -73,17 +72,7 @@ export default class Awan extends Plugin {
 
 		this.addSettingTab(new AwanSettingTab(this.app, this));
 		this.updateStatus();
-
-		// Updates the status whenever a file is created, modified, renamed, or deleted.
-		const fileEventCallback = (_file: TAbstractFile) => {
-			if (this.status === SyncStatus.SYNCING) return;
-			if (this.status === SyncStatus.ERROR) return;
-			this.updateStatus();
-		};
-		this.registerEvent(this.app.vault.on('create', fileEventCallback));
-		this.registerEvent(this.app.vault.on('modify', fileEventCallback));
-		this.registerEvent(this.app.vault.on('rename', fileEventCallback));
-		this.registerEvent(this.app.vault.on('delete', fileEventCallback));
+		this.registerEvents();
 
 		await this.updateAutoSync();
 
@@ -176,20 +165,45 @@ export default class Awan extends Plugin {
 	}
 
 	/**
+	 * Register file events for this plugin
+	 */
+	private registerEvents() {
+		// Updates the status whenever a file is created, modified, renamed, or deleted.
+		const updateStatusCallback = () => {
+			if (this.status === SyncStatus.SYNCING) return;
+			if (this.status === SyncStatus.ERROR) return;
+			this.updateStatus();
+		};
+
+		this.registerEvent(this.app.vault.on('create', (file: TAbstractFile) => {
+			updateStatusCallback();
+		}));
+		this.registerEvent(this.app.vault.on('modify', (file: TAbstractFile) => {
+			updateStatusCallback();
+		}));
+		this.registerEvent(this.app.vault.on('rename', (file: TAbstractFile, _oldPath: string) => {
+			updateStatusCallback();
+		}));
+		this.registerEvent(this.app.vault.on('delete', (file: TAbstractFile) => {
+			updateStatusCallback();
+		}));
+	}
+
+	/**
 	 * Register statusbar elemnt if not exists.
 	 * 
 	 * @private
 	 */
 	private registerStatusBar() {
-		if (this.statusBarElement && this.statusBarIcon) return;
+		if (this.statusBarIcon) return;
 
-		this.statusBarElement = this.addStatusBarItem();
-		this.statusBarElement.addClass('mod-clickable');
-		const segment = this.statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] });
-		this.statusBarIcon = segment.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
+		const statusBarElement = this.addStatusBarItem();
+		statusBarElement.addClass('mod-clickable');
+		const statusBarSegment = statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] });
+		this.statusBarIcon = statusBarSegment.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
 
 		// Register status bar menu on click.
-		this.statusBarElement.onClickEvent((ev: MouseEvent) => {
+		statusBarElement.onClickEvent((ev: MouseEvent) => {
 			const menu = new Menu();
 			menu.addItem(item => item
 				.setDisabled(this.isSyncing || this.status === SyncStatus.UNINITIALIZED)
@@ -269,7 +283,7 @@ export default class Awan extends Plugin {
 	 * This function optionally register status bar if not exists.
 	 */
 	private updateStatusBar() {
-		setTooltip(this.statusBarElement, this.status, { placement: "top" });
+		setTooltip(this.statusBarIcon, this.status, { placement: "top" });
 		setIcon(this.statusBarIcon, this.getCurrentStatusIcon());
 		this.setStatusBarIconColor(this.getCurrentStatusColor());
 
