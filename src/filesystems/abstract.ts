@@ -2,7 +2,7 @@ import { App } from "obsidian";
 import type { SupportedServiceType } from "../types";
 import { S3Filesystem } from "./s3";
 import { nanoid } from "nanoid";
-import type { AwanSettings } from "../settings";
+import type { AwanSettings } from "../types";
 import { isEqual } from "es-toolkit";
 import Awan from "main";
 

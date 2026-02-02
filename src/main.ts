@@ -1,5 +1,6 @@
 import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData, IconName } from 'obsidian';
-import { AwanLocalSettings, AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
+import { AwanSettingTab, } from './settings';
+import { AwanLocalSettings, AwanSettings, SelectiveSyncSettings, VaultSyncSettings } from './types';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
 import sync from './commands/sync';
