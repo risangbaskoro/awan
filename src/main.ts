@@ -1,4 +1,4 @@
-import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData } from 'obsidian';
+import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData, IconName } from 'obsidian';
 import { AwanLocalSettings, AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
@@ -271,36 +271,39 @@ export default class Awan extends Plugin {
 	 */
 	private updateStatusBar() {
 		setTooltip(this.statusBarElement, this.status, { placement: "top" });
-		switch (this.status) {
-			case SyncStatus.UNINITIALIZED:
-				setIcon(this.statusBarIcon, 'cloud-off');
-				this.setStatusBarIconColor('warning');
-				break;
-			case SyncStatus.UNVALIDATED:
-				setIcon(this.statusBarIcon, 'cloud-cog');
-				this.setStatusBarIconColor();
-				break;
-			case SyncStatus.IDLE:
-				setIcon(this.statusBarIcon, 'cloud');
-				this.setStatusBarIconColor();
-				break;
-			case SyncStatus.SYNCING:
-				setIcon(this.statusBarIcon, 'refresh-cw');
-				this.setStatusBarIconColor();
-				break;
-			case SyncStatus.SUCCESS:
-				setIcon(this.statusBarIcon, 'cloud-check');
-				this.setStatusBarIconColor('success');
-				break;
-			case SyncStatus.ERROR:
-				setIcon(this.statusBarIcon, 'cloud-alert');
-				this.setStatusBarIconColor('warning');
-				break;
-			default:
-				break;
-		}
+		setIcon(this.statusBarIcon, this.getCurrentStatusIcon());
+		this.setStatusBarIconColor(this.getCurrentStatusColor());
 
 		this.statusBarIcon.toggleClass('animate-spin', this.status === SyncStatus.SYNCING);
+	}
+
+	/**
+	 * Get the icon string representation for the current plugin status.
+	 * @returns A Lucide icon string.
+	 */
+	getCurrentStatusIcon(): IconName {
+		switch (this.status) {
+			case SyncStatus.UNINITIALIZED: return 'cloud-off';
+			case SyncStatus.UNVALIDATED: return 'cloud-cog';
+			case SyncStatus.IDLE: return 'cloud';
+			case SyncStatus.SYNCING: return 'refresh-cw';
+			case SyncStatus.SUCCESS: return 'cloud-check';
+			case SyncStatus.ERROR: return 'cloud-alert';
+			default: return 'cloud';
+		}
+	}
+
+	/**
+	 * Get the color string representation for the current plugin status.
+	 * @returns A color string, used in conjunction with `mod-<color>` class.
+	 */
+	getCurrentStatusColor(): 'default' | 'success' | 'warning' {
+		switch (this.status) {
+			case SyncStatus.UNINITIALIZED: return 'warning';
+			case SyncStatus.SUCCESS: return 'success';
+			case SyncStatus.ERROR: return 'warning';
+			default: return 'default';
+		}
 	}
 
 	/**
