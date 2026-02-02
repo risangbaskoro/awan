@@ -41,14 +41,6 @@ export default async function sync(plugin: Awan) {
 
         // Step 5: Build sync plans.
         mixedEntityMapping = computeSyncPlan(mixedEntityMapping);
-        if (Awan.isDevelopment()) {
-            console.debug(localEntityArray.map((e: Entity) => e.key), Object.keys(mixedEntityMapping));
-            console.debug(Object.fromEntries(
-                Object.values(mixedEntityMapping)
-                    .filter((e: MixedEntity) => e.action != 'no_op')
-                    .map((e: MixedEntity) => [e.key, `${e.action} because ${e.reason}`])
-            ));
-        }
 
         // Step 6: Do the actual syncing.
         await actualSync(
@@ -204,13 +196,6 @@ async function actualSync(
 
                 // Only update database if operation produced results
                 if (Object.keys(operationResult).length) {
-                    if (Awan.isDevelopment()) {
-                        console.debug(
-                            `Storing ${mixedEntity.action}. Operation result and to store:`,
-                            operationResult,
-                            entityToStore
-                        );
-                    }
                     await plugin.database.previousSync.setItem(key, entityToStore);
                 }
             } catch (error) {
@@ -396,15 +381,6 @@ function hasChanged(current: Entity, previous: Entity): boolean {
     }
 
     // For S3, compare by etag
-    if (current.etag && Awan.isDevelopment()) {
-        console.warn(
-            'Comparing etag for current and previous.',
-            current.etag,
-            previous.etag,
-            `Result: ${current.etag !== previous.etag ? 'Different' : 'Same'}`
-        );
-    }
-
     if (current.etag !== undefined && previous.etag !== undefined) {
         return current.etag !== previous.etag;
     }
