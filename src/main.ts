@@ -54,7 +54,8 @@ export default class Awan extends Plugin {
 	syncStatus: SyncStatus = SyncStatus.UNINITIALIZED;
 	syncing: boolean = false;
 	lastSynced: number;
-	statusBarIcon: HTMLSpanElement;
+	statusBarEl: HTMLElement;
+	statusIconEl: HTMLSpanElement;
 	autoSyncIntervalId: number | undefined;
 
 	/** 
@@ -189,28 +190,33 @@ export default class Awan extends Plugin {
 	 * @private
 	 */
 	private registerStatusBar() {
-		if (this.statusBarIcon) return;
+		if (this.statusIconEl) return;
 
-		const statusBarElement = this.addStatusBarItem();
-		statusBarElement.addClass('mod-clickable');
-		const statusBarSegment = statusBarElement.createEl('div', { cls: ['status-bar-item-segment'] });
-		this.statusBarIcon = statusBarSegment.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
-
-		// Register status bar menu on click.
-		statusBarElement.onClickEvent((ev: MouseEvent) => {
+		const clickEvent = (ev: MouseEvent) => {
 			const menu = new Menu();
+			menu.setUseNativeMenu(Awan.isProduction()); // NOTE: Temporary until mobile status bar.
 			menu.addItem(item => item
 				.setDisabled(this.syncing || this.syncStatus === SyncStatus.UNINITIALIZED)
 				.setTitle(`${this.manifest.name}: ${this.syncStatus}`)
-				.onClick(() => sync(this))
+				.onClick(async () => {
+					await sync(this);
+				})
 			);
+
 			menu.addSeparator();
 			menu.addItem(item => item
 				.setTitle('Settings')
+				.setIcon('settings')
 				.onClick(() => this.openSettingsTab())
 			);
 			menu.showAtMouseEvent(ev);
-		});
+		};
+
+		this.statusBarEl = this.addStatusBarItem();
+		this.statusBarEl.addClass('mod-clickable');
+		const statusBarSegmentEl = this.statusBarEl.createEl('div', { cls: ['status-bar-item-segment'] });
+		this.statusIconEl = statusBarSegmentEl.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
+		this.statusIconEl.onClickEvent((ev: MouseEvent) => clickEvent(ev));
 	}
 
 	/**
@@ -277,11 +283,11 @@ export default class Awan extends Plugin {
 	 * This function optionally register status bar if not exists.
 	 */
 	private updateStatusBar() {
-		setTooltip(this.statusBarIcon, this.syncStatus, { placement: "top" });
-		setIcon(this.statusBarIcon, this.getCurrentStatusIcon());
+		setTooltip(this.statusBarEl, this.syncStatus, { placement: "top" });
+		setIcon(this.statusIconEl, this.getCurrentStatusIcon());
 		this.setStatusBarIconColor(this.getCurrentStatusColor());
 
-		this.statusBarIcon.toggleClass('animate-spin', this.syncStatus === SyncStatus.SYNCING);
+		this.statusIconEl.toggleClass('animate-spin', this.syncStatus === SyncStatus.SYNCING);
 	}
 
 	/**
@@ -291,7 +297,6 @@ export default class Awan extends Plugin {
 	getCurrentStatusIcon(): IconName {
 		switch (this.syncStatus) {
 			case SyncStatus.UNINITIALIZED: return 'cloud-off';
-			case SyncStatus.UNVALIDATED: return 'cloud-cog';
 			case SyncStatus.IDLE: return 'cloud';
 			case SyncStatus.SYNCING: return 'refresh-cw';
 			case SyncStatus.SUCCESS: return 'cloud-check';
@@ -321,18 +326,18 @@ export default class Awan extends Plugin {
 	private setStatusBarIconColor(color?: 'default' | 'success' | 'warning') {
 		switch (color) {
 			case 'success':
-				this.statusBarIcon.removeClass('mod-warning');
-				this.statusBarIcon.addClass('mod-success');
+				this.statusIconEl.removeClass('mod-warning');
+				this.statusIconEl.addClass('mod-success');
 				break;
 			case 'warning':
-				this.statusBarIcon.removeClass('mod-success');
-				this.statusBarIcon.addClass('mod-warning');
+				this.statusIconEl.removeClass('mod-success');
+				this.statusIconEl.addClass('mod-warning');
 				break;
 			case 'default':
-				this.statusBarIcon.removeClasses(['mod-success', 'mod-warning']);
+				this.statusIconEl.removeClasses(['mod-success', 'mod-warning']);
 				break;
 			default:
-				this.statusBarIcon.removeClasses(['mod-success', 'mod-warning']);
+				this.statusIconEl.removeClasses(['mod-success', 'mod-warning']);
 				break;
 		}
 	}
