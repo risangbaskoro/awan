@@ -135,8 +135,8 @@ export interface MixedEntity {
 }
 
 export const S3ConfigSchema = z.object({
-	accessKeyId: z.string().min(1).exactOptional(),
-	secretAccessKey: z.string().min(1).exactOptional(),
+	accessKeyId: z.string().min(1),
+	secretAccessKey: z.string().min(1),
 	endpoint: z.string().min(1),
 	region: z.string().min(1),
 	bucket: z.string().min(1),
