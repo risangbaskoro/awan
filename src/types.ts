@@ -1,3 +1,4 @@
+import { Entity } from "filesystems/abstract";
 import { z } from "zod";
 
 export enum SyncStatus {
@@ -10,6 +11,38 @@ export enum SyncStatus {
 }
 
 export type SupportedServiceType = 's3';
+
+/**
+ * Sync action to do.
+ */
+export type SyncAction =
+	| 'no_op'
+	| 'upload'
+	| 'download'
+	| 'delete_local'
+	| 'delete_remote'
+	| 'delete_previous_sync'
+	| 'conflict';
+
+/**
+ * The entity mixed to be compared.
+ */
+export interface MixedEntity {
+	/** The key of the entity. */
+	key: string;
+	/** If the entity is changed. */
+	change?: boolean;
+	/** Action to take. */
+	action?: SyncAction;
+	/** The reason for the action. */
+	reason?: string,
+	/** Entity instance from local file. */
+	local?: Entity;
+	/** Entity instance from file in remote. */
+	remote?: Entity;
+	/** Entity saved to the database from previous sync. */
+	previousSync?: Entity;
+}
 
 export const S3ConfigSchema = z.object({
 	accessKeyId: z.string().min(1).exactOptional(),
