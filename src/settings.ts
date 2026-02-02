@@ -47,16 +47,20 @@ export interface AwanSettings {
 	serviceType: SupportedServiceType;
 	/** The key to password in Obsidian keychain for encryption. */
 	password: string;
-	/** Whether to enable scheduled sync. */
-	enabled?: boolean;
-	/* Sync interval in milliseconds. */
-	syncIntervalMs?: number;
 	/** Settings enable sync vault settings. */
 	vaultSyncSettings: VaultSyncSettings;
 	/** Settings to select which files in the vault to be synced. */
 	selectiveSync: SelectiveSyncSettings;
 	/** S3 configurations. */
 	s3: S3Config;
+}
+
+/** Settings that are stored locally using local storage. */
+export interface AwanLocalSettings {
+	/** Whether to enable scheduled sync. */
+	enabled?: boolean;
+	/* Sync interval in milliseconds. */
+	syncIntervalMs?: number;
 }
 
 export class AwanSettingTab extends PluginSettingTab {
@@ -76,25 +80,25 @@ export class AwanSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-		const { settings } = this.plugin;
+		const { localSettings } = this.plugin;
 		containerEl.empty();
 
 		const generalSettings = new SettingGroup(containerEl)
 			.addSetting(setting => {
 				setting
 					.setName(`${this.plugin.manifest.name} status`)
-					.setDesc(`Awan is currently ${settings.enabled ? 'running' : 'paused'}.`)
+					.setDesc(`Awan is currently ${localSettings.enabled ? 'running' : 'paused'}.`)
 					.addButton((button) => button
-						.setButtonText(settings.enabled ? 'Pause' : 'Resume')
-						.onClick(async () => {
-							this.plugin.settings.enabled = !settings.enabled;
-							await this.plugin.saveSettings();
+						.setButtonText(localSettings.enabled ? 'Pause' : 'Resume')
+						.onClick(() => {
+							this.plugin.localSettings.enabled = !localSettings.enabled;
+							this.plugin.saveLocalSettings();
 							this.display();
 							this.updateAutoSync();
 						})
 					)
 			});
-		if (this.plugin.settings.enabled) {
+		if (this.plugin.localSettings.enabled) {
 			generalSettings
 				.addSetting(setting => {
 					setting
@@ -102,9 +106,9 @@ export class AwanSettingTab extends PluginSettingTab {
 						.setDesc('Scheduled sync interval in minutes.')
 						.addExtraButton(btn => btn
 							.setIcon('reset')
-							.onClick(async () => {
-								this.plugin.settings.syncIntervalMs = 60000 * 5;
-								await this.plugin.saveSettings();
+							.onClick(() => {
+								this.plugin.localSettings.syncIntervalMs = 60000 * 5;
+								this.plugin.saveLocalSettings();
 								this.display();
 								this.updateAutoSync();
 							})
@@ -113,11 +117,11 @@ export class AwanSettingTab extends PluginSettingTab {
 							.setLimits(1, 20, 1)
 							.setInstant(true)
 							.setDynamicTooltip()
-							.setValue(Math.max(this.plugin.settings.syncIntervalMs ?? 0, 5) / 60000)
-							.onChange(async (value: number) => {
+							.setValue(Math.max(this.plugin.localSettings.syncIntervalMs ?? 0, 5) / 60000)
+							.onChange((value: number) => {
 								const newInterval = Math.max(value, 1) * 60000; // In convert to minutes
-								this.plugin.settings.syncIntervalMs = newInterval;
-								await this.plugin.saveSettings();
+								this.plugin.localSettings.syncIntervalMs = newInterval;
+								this.plugin.saveLocalSettings();
 								this.updateAutoSync();
 							})
 						)

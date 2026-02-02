@@ -1,5 +1,5 @@
 import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData } from 'obsidian';
-import { AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
+import { AwanLocalSettings, AwanSettings, AwanSettingTab, SelectiveSyncSettings, VaultSyncSettings } from './settings';
 import { S3ConfigSchema, SyncStatus } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
 import sync from './commands/sync';
@@ -30,8 +30,6 @@ const DEFAULT_SELECTIVE_SYNC_SETTINGS: SelectiveSyncSettings = {
 
 /** The default Awan plugin settings. */
 const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
-	enabled: true,
-	syncIntervalMs: 5 * 60000,
 	password: '',
 	serviceType: 's3',
 	vaultSyncSettings: DEFAULT_VAULT_SETTINGS,
@@ -39,11 +37,18 @@ const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	s3: DEFAULT_S3_CONFIG,
 }
 
+/** The default Awan local settings from local storage. */
+const DEFAULT_AWAN_LOCAL_SETTINGS: Partial<AwanLocalSettings> = {
+	enabled: true,
+	syncIntervalMs: 5 * 60000,
+}
+
 /** 
  * Awan plugin main class. 
  */
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
+	localSettings!: AwanLocalSettings;
 	database!: Database;
 	status!: SyncStatus;
 	isSyncing!: boolean;
@@ -58,6 +63,8 @@ export default class Awan extends Plugin {
 	async onload() {
 		if (!Awan.isProduction()) console.debug(`${this.manifest.id}: Initializing...`);
 		await this.loadSettings();
+		this.loadLocalSettings();
+		this.saveLocalSettings();
 
 		this.database = new Database(this.app);
 
@@ -101,7 +108,7 @@ export default class Awan extends Plugin {
 	}
 
 	async updateAutoSync() {
-		const { enabled, syncIntervalMs } = this.settings;
+		const { enabled, syncIntervalMs } = this.localSettings;
 
 		if (this.autoSyncIntervalId !== undefined) {
 			window.clearInterval(this.autoSyncIntervalId);
@@ -376,11 +383,26 @@ export default class Awan extends Plugin {
 	}
 
 	/**
+	 * Load local settings from local storage.
+	 */
+	loadLocalSettings() {
+		this.localSettings = Object.assign(
+			{},
+			DEFAULT_AWAN_LOCAL_SETTINGS,
+			this.app.loadLocalStorage(`${this.manifest.id}-settings`)
+		) as AwanLocalSettings;
+	}
+
+	/**
 	 * Save settings to plugin's `data.json` file.
 	 */
 	async saveSettings() {
 		await this.saveData(this.settings);
 		this.updateStatus();
+	}
+
+	saveLocalSettings() {
+		this.app.saveLocalStorage(`${this.manifest.id}-settings`, this.localSettings)
 	}
 
 	/**
