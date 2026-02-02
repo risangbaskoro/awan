@@ -149,16 +149,11 @@ export default class Awan extends Plugin {
 
 		this.addCommand({
 			id: `setup`,
-			name: `Set up remote sync`,
+			name: `Set up sync`,
 			checkCallback: (checking: boolean) => {
-				if (!(this.validateServiceSettings())) {
-					if (!checking) {
-						testConnection(this).catch((err) => {
-							console.error(`${this.manifest.id}: Test connection failed.`, err);
-						});
-					}
-				}
-				return false;
+				if (this.validateServiceSettings()) return false;
+				if (!checking) this.openSettingsTab();
+				return true;
 			}
 		});
 	}
