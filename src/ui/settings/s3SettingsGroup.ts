@@ -16,7 +16,7 @@ export class S3SettingsGroup extends SettingGroup {
                     .addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
                         .setValue(this.plugin.settings.s3.accessKeyId ?? "")
                         .onChange(async (value: string) => {
-                            this.plugin.settings.s3.accessKeyId = value ? value : undefined;
+                            this.plugin.settings.s3.accessKeyId = value;
                             await this.plugin.saveSettings();
                         }))
             })
@@ -26,7 +26,7 @@ export class S3SettingsGroup extends SettingGroup {
                     .addComponent((el: HTMLElement) => new SecretComponent(this.app, el)
                         .setValue(this.plugin.settings.s3.secretAccessKey ?? "")
                         .onChange(async (value: string) => {
-                            this.plugin.settings.s3.secretAccessKey = value ? value : undefined;
+                            this.plugin.settings.s3.secretAccessKey = value;
                             await this.plugin.saveSettings();
                         }))
             })
