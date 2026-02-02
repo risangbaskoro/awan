@@ -1,10 +1,12 @@
 import Awan from "main";
-import { Modal, App, setIcon, TFolder } from "obsidian";
+import { Modal, App, setIcon } from "obsidian";
 
 interface FolderNode {
-    folder: TFolder;
+    name: string;
+    path: string;
     children: FolderNode[];
     depth: number;
+    exists: boolean;
 }
 
 /** Modal to configure excluded folders. */
@@ -55,24 +57,48 @@ export class ExcludedFoldersModal extends Modal {
 
     private buildFolderTree(): FolderNode[] {
         const folders = this.app.vault.getAllFolders();
-
-        // Create a map for quick lookup
         const folderMap = new Map<string, FolderNode>();
-        const rootNodes: FolderNode[] = [];
 
-        // Initialize all folder nodes
+        // 1. Add existing folders from vault
         folders.forEach(folder => {
             folderMap.set(folder.path, {
-                folder,
+                name: folder.name,
+                path: folder.path,
                 children: [],
-                depth: folder.path.split('/').length - 1
+                depth: folder.path.split('/').length - 1,
+                exists: true
             });
         });
 
-        // Build the tree structure
-        folders.forEach(folder => {
-            const node = folderMap.get(folder.path)!;
-            const parentPath = folder.path.includes('/') ? folder.path.substring(0, folder.path.lastIndexOf('/')) : '';
+        // 2. Add excluded folders that might be missing locally
+        this.excludedFolders.forEach(excludedPath => {
+            if (folderMap.has(excludedPath)) return;
+
+            // Add missing folder and ensure its parents exist in the map
+            let currentPath = excludedPath;
+            while (currentPath) {
+                if (folderMap.has(currentPath)) break; // Parent already exists
+
+                const name = currentPath.split('/').pop() || currentPath;
+                folderMap.set(currentPath, {
+                    name: name,
+                    path: currentPath,
+                    children: [],
+                    depth: currentPath.split('/').length - 1,
+                    exists: false
+                });
+
+                const parentIndex = currentPath.lastIndexOf('/');
+                if (parentIndex === -1) break;
+                currentPath = currentPath.substring(0, parentIndex);
+            }
+        });
+
+        const rootNodes: FolderNode[] = [];
+
+        // 3. Build the tree structure by linking children to parents
+        folderMap.forEach(node => {
+            const parentPath = node.path.includes('/') ? node.path.substring(0, node.path.lastIndexOf('/')) : '';
 
             if (parentPath && folderMap.has(parentPath)) {
                 folderMap.get(parentPath)!.children.push(node);
@@ -81,9 +107,9 @@ export class ExcludedFoldersModal extends Modal {
             }
         });
 
-        // Sort nodes alphabetically
+        // 4. Sort nodes alphabetically
         const sortNodes = (nodes: FolderNode[]) => {
-            nodes.sort((a, b) => a.folder.name.localeCompare(b.folder.name));
+            nodes.sort((a, b) => a.name.localeCompare(b.name));
             nodes.forEach(node => sortNodes(node.children));
         };
         sortNodes(rootNodes);
@@ -99,23 +125,32 @@ export class ExcludedFoldersModal extends Modal {
             const indent = node.depth * 20;
             folderEl.style.marginLeft = `${indent}px`;
 
+            // Style missing folders
+            if (!node.exists) {
+                folderEl.classList.add('is-missing');
+                folderEl.title = 'Folder does not exist locally';
+            }
+
             // Add folder icon
             const iconEl = folderEl.createSpan('awan-folder-icon');
             setIcon(iconEl, 'folder');
 
             // Add folder name
             const nameEl = folderEl.createSpan('awan-folder-name');
-            nameEl.textContent = node.folder.name;
+            nameEl.textContent = node.name;
+            if (!node.exists) {
+                nameEl.createSpan({ text: ' (missing)', cls: 'awan-folder-missing-label' });
+            }
 
             // Check if this folder or any parent is excluded
-            const isExcluded = this.isFolderExcluded(node.folder.path);
+            const isExcluded = this.isFolderExcluded(node.path);
             if (isExcluded) {
                 folderEl.classList.add('excluded');
             }
 
             // Handle click
             folderEl.addEventListener('click', () => {
-                this.toggleFolder(node.folder.path);
+                this.toggleFolder(node.path);
                 // Re-render the entire tree to update colors
                 this.renderFolderTree(nodes);
             });
