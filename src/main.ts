@@ -146,7 +146,7 @@ export default class Awan extends Plugin {
 		});
 
 		this.addCommand({
-			id: `test-connection`,
+			id: `test`,
 			name: `Test connection`,
 			checkCallback: (checking: boolean) => {
 				if (this.validateServiceSettings()) {
