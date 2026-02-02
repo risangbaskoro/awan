@@ -195,13 +195,23 @@ export default class Awan extends Plugin {
 		const clickEvent = (ev: MouseEvent) => {
 			const menu = new Menu();
 			menu.setUseNativeMenu(Awan.isProduction()); // NOTE: Temporary until mobile status bar.
-			menu.addItem(item => item
-				.setDisabled(this.syncing || this.syncStatus === SyncStatus.UNINITIALIZED)
-				.setTitle(`${this.manifest.name}: ${this.syncStatus}`)
-				.onClick(async () => {
-					await sync(this);
-				})
-			);
+
+			if (this.syncStatus === SyncStatus.UNINITIALIZED) {
+				menu.addItem(item => item
+					.setDisabled(true)
+					.setIcon('circle-alert')
+					.setTitle(`${this.manifest.name}: ${this.syncStatus}`)
+				);
+			} else {
+				menu.addItem(item => item
+					.setTitle(this.localSettings.enabled ? 'Pause' : 'Resume')
+					.setIcon(this.localSettings.enabled ? 'circle-pause' : 'circle-play')
+					.onClick(async () => {
+						this.localSettings.enabled = !this.localSettings.enabled;
+						this.saveLocalSettings();
+					})
+				)
+			}
 
 			menu.addSeparator();
 			menu.addItem(item => item
