@@ -18,7 +18,7 @@ export class SelectiveSyncSettingsGroup extends SettingGroup {
                     .setDesc(`Prevent certain folders from being synced to remote storage.`)
                     .addButton(button => {
                         button
-                            .setButtonText(`Configure`)
+                            .setButtonText(`Manage`)
                             .onClick(() => {
                                 new ExcludedFoldersModal(this.app, this.plugin).open();
                             })
