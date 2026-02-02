@@ -61,7 +61,6 @@ export default class Awan extends Plugin {
 	 * Setup when the plugin loads.
 	 */
 	async onload() {
-		if (!Awan.isProduction()) console.debug(`${this.manifest.id}: Initializing...`);
 		await this.loadSettings();
 		this.loadLocalSettings();
 		this.saveLocalSettings();
@@ -90,7 +89,6 @@ export default class Awan extends Plugin {
 		// TODO: Register protocol handler for importing config.
 		this.registerObsidianProtocolHandler(this.manifest.id, (data: ObsidianProtocolData) => this.onUriCall(data));
 
-		if (!Awan.isProduction()) console.debug(`${this.manifest.id} ${this.manifest.version} is loaded.`);
 	}
 
 	/** 
