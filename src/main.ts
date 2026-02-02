@@ -51,8 +51,8 @@ export default class Awan extends Plugin {
 	settings!: AwanSettings;
 	localSettings!: AwanLocalSettings;
 	database!: Database;
-	status!: SyncStatus;
-	isSyncing!: boolean;
+	syncStatus: SyncStatus = SyncStatus.UNINITIALIZED;
+	syncing: boolean = false;
 	lastSynced: number;
 	statusBarIcon: HTMLSpanElement;
 	autoSyncIntervalId: number | undefined;
@@ -78,7 +78,6 @@ export default class Awan extends Plugin {
 
 		// TODO: Register protocol handler for importing config.
 		this.registerObsidianProtocolHandler(this.manifest.id, (data: ObsidianProtocolData) => this.onUriCall(data));
-
 	}
 
 	/** 
@@ -170,8 +169,8 @@ export default class Awan extends Plugin {
 	private registerEvents() {
 		// Updates the status whenever a file is created, modified, renamed, or deleted.
 		const updateStatusCallback = () => {
-			if (this.status === SyncStatus.SYNCING) return;
-			if (this.status === SyncStatus.ERROR) return;
+			if (this.syncStatus === SyncStatus.SYNCING) return;
+			if (this.syncStatus === SyncStatus.ERROR) return;
 			this.updateStatus();
 		};
 
@@ -206,8 +205,8 @@ export default class Awan extends Plugin {
 		statusBarElement.onClickEvent((ev: MouseEvent) => {
 			const menu = new Menu();
 			menu.addItem(item => item
-				.setDisabled(this.isSyncing || this.status === SyncStatus.UNINITIALIZED)
-				.setTitle(`${this.manifest.name}: ${this.status}`)
+				.setDisabled(this.syncing || this.syncStatus === SyncStatus.UNINITIALIZED)
+				.setTitle(`${this.manifest.name}: ${this.syncStatus}`)
 				.onClick(() => sync(this))
 			);
 			menu.addSeparator();
@@ -223,7 +222,7 @@ export default class Awan extends Plugin {
 	 * Mark the plugin as currently syncing.
 	 */
 	private markIsSyncing(isSyncing: boolean) {
-		this.isSyncing = isSyncing;
+		this.syncing = isSyncing;
 	}
 
 	/**
@@ -234,7 +233,7 @@ export default class Awan extends Plugin {
 	updateStatus(status?: SyncStatus) {
 		// Set status if defined.
 		if (status) {
-			this.status = status;
+			this.syncStatus = status;
 			switch (status) {
 				case SyncStatus.UNINITIALIZED:
 					this.markIsSyncing(false);
@@ -269,7 +268,7 @@ export default class Awan extends Plugin {
 		}
 
 		// Check if the remote config is not yet validated.
-		if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(this.status)) {
+		if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(this.syncStatus)) {
 			this.updateStatus(SyncStatus.UNVALIDATED);
 			return;
 		}
@@ -283,11 +282,11 @@ export default class Awan extends Plugin {
 	 * This function optionally register status bar if not exists.
 	 */
 	private updateStatusBar() {
-		setTooltip(this.statusBarIcon, this.status, { placement: "top" });
+		setTooltip(this.statusBarIcon, this.syncStatus, { placement: "top" });
 		setIcon(this.statusBarIcon, this.getCurrentStatusIcon());
 		this.setStatusBarIconColor(this.getCurrentStatusColor());
 
-		this.statusBarIcon.toggleClass('animate-spin', this.status === SyncStatus.SYNCING);
+		this.statusBarIcon.toggleClass('animate-spin', this.syncStatus === SyncStatus.SYNCING);
 	}
 
 	/**
@@ -295,7 +294,7 @@ export default class Awan extends Plugin {
 	 * @returns A Lucide icon string.
 	 */
 	getCurrentStatusIcon(): IconName {
-		switch (this.status) {
+		switch (this.syncStatus) {
 			case SyncStatus.UNINITIALIZED: return 'cloud-off';
 			case SyncStatus.UNVALIDATED: return 'cloud-cog';
 			case SyncStatus.IDLE: return 'cloud';
@@ -311,7 +310,7 @@ export default class Awan extends Plugin {
 	 * @returns A color string, used in conjunction with `mod-<color>` class.
 	 */
 	getCurrentStatusColor(): 'default' | 'success' | 'warning' {
-		switch (this.status) {
+		switch (this.syncStatus) {
 			case SyncStatus.UNINITIALIZED: return 'warning';
 			case SyncStatus.SUCCESS: return 'success';
 			case SyncStatus.ERROR: return 'warning';

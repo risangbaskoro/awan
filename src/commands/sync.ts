@@ -11,7 +11,7 @@ import { fixTimeformat } from "utils/functions";
 
 export default async function sync(plugin: Awan) {
     // Abort if is currently syncing.
-    if (plugin.isSyncing) {
+    if (plugin.syncing) {
         new Notice(`Sync is currently running.`);
         return;
     }

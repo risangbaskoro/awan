@@ -11,7 +11,7 @@ export default async function testConnection(plugin: Awan) {
         const client = new S3Filesystem(plugin.app, plugin.settings.s3);
         await client.testConnection();
 
-        if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(plugin.status)) {
+        if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(plugin.syncStatus)) {
             plugin.updateStatus(SyncStatus.IDLE);
         }
 
