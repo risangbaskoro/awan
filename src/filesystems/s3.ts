@@ -24,6 +24,7 @@ import { bufferToArrayBuffer, concatUint8Arrays, getDirectoryLevels } from "../u
 import { Upload } from "@aws-sdk/lib-storage";
 // @ts-ignore
 import * as mime from "mime-types";
+import Awan from "main";
 
 
 export const DEFAULT_S3_CONFIG: S3Config = {
@@ -501,7 +502,7 @@ export class S3Filesystem extends Filesystem {
 
 	async testConnection(callback?: (err: unknown) => void): Promise<boolean> {
 		try {
-			console.debug("Test connection: List objects command")
+			if (Awan.isDevelopment()) console.debug("Test connection: List objects command")
 			const command = {
 				Bucket: this.config.bucket,
 			} as ListObjectsV2CommandInput;
@@ -535,10 +536,10 @@ export class S3Filesystem extends Filesystem {
 			throw err;
 		}
 
-		console.debug("Test connection: Walk");
+		if (Awan.isDevelopment()) console.debug("Test connection: Walk");
 		await this.walk();
 
-		console.debug("Test connection: Walk partial");
+		if (Awan.isDevelopment()) console.debug("Test connection: Walk partial");
 		await this.walkPartial();
 
 		return await this.commonTestConnectionOps(callback);
@@ -668,24 +669,24 @@ async function getObjectBodyToArrayBuffer(body: unknown): Promise<ArrayBuffer> {
 	if (body === undefined) {
 		throw Error(`ObjectBody is undefined and don't know how to deal with it`);
 	}
-	
+
 	// Handle AWS SDK v3 streaming types that may have transformToByteArray method
 	const bodyAsSdkStream = body as { transformToByteArray?: () => Promise<Uint8Array> };
 	if (typeof bodyAsSdkStream.transformToByteArray === 'function') {
 		const byteArray = await bodyAsSdkStream.transformToByteArray();
 		return bufferToArrayBuffer(byteArray) as ArrayBuffer;
 	}
-	
+
 	// Handle browser ReadableStream
 	if (body instanceof ReadableStream) {
 		return await new Response(body, {}).arrayBuffer();
 	}
-	
+
 	// Handle Blob
 	if (body instanceof Blob) {
 		return await body.arrayBuffer();
 	}
-	
+
 	// Handle Node.js-like streams (fallback for edge cases)
 	const bodyAsStream = body as { on?: (event: string, callback: (data?: unknown) => void) => void };
 	if (body && typeof bodyAsStream.on === 'function') {
@@ -699,6 +700,6 @@ async function getObjectBodyToArrayBuffer(body: unknown): Promise<ArrayBuffer> {
 			});
 		});
 	}
-	
+
 	throw TypeError(`The body type is not supported: ${typeof body}`);
 };

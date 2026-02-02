@@ -4,6 +4,7 @@ import { S3Filesystem } from "./s3";
 import { nanoid } from "nanoid";
 import type { AwanSettings } from "../settings";
 import { isEqual } from "es-toolkit";
+import Awan from "main";
 
 /**
  * Entity is a file information.
@@ -112,32 +113,32 @@ export abstract class Filesystem {
 	 */
 	async commonTestConnectionOps(onError?: (err: unknown) => void) {
 		try {
-			console.debug('Test connection: Create directory');
+			if(Awan.isDevelopment()) console.debug('Test connection: Create directory');
 			const dirName = `awan-test-dir-${nanoid()}/`;
 			await this.mkdir(dirName);
 
-			console.debug('Test connection: Write file');
+			if(Awan.isDevelopment()) console.debug('Test connection: Write file');
 			const filepath = `${dirName}awan-test-file-${nanoid()}`;
 			const ctime = Date.now();
 			const mtime1 = Date.now();
 			const content1 = new ArrayBuffer(100);
 			await this.write(filepath, content1, mtime1, ctime);
 
-			console.debug('Test connection: Overwrite a file');
+			if(Awan.isDevelopment()) console.debug('Test connection: Overwrite a file');
 			const mtime2 = Date.now();
 			const content2 = new ArrayBuffer(200);
 			await this.write(filepath, content2, mtime2, ctime);
 
-			console.debug('Test connection: Read a file');
+			if(Awan.isDevelopment()) console.debug('Test connection: Read a file');
 			const content3 = await this.read(filepath);
 			if (!isEqual(content2, content3)) {
 				throw Error(`Downloaded file is not equal to uploaded file.`)
 			}
 
-			console.debug('Test connection: Delete a file');
+			if(Awan.isDevelopment()) console.debug('Test connection: Delete a file');
 			await this.rm(filepath);
 
-			console.debug('Test connection: Delete a directory');
+			if(Awan.isDevelopment()) console.debug('Test connection: Delete a directory');
 			await this.rm(dirName);
 
 			return true;
