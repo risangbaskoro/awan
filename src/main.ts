@@ -1,4 +1,4 @@
-import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData, IconName } from 'obsidian';
+import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData, IconName, Platform, WorkspaceMobileDrawer, WorkspaceItem } from 'obsidian';
 import { AwanSettingTab, } from './settings';
 import { AwanLocalSettings, AwanSettings, SelectiveSyncSettings, VaultSyncSettings } from './types';
 import { S3ConfigSchema, SyncStatus } from './types';
@@ -6,6 +6,7 @@ import { DEFAULT_S3_CONFIG } from './filesystems/s3';
 import sync from './commands/sync';
 import { Database } from './database';
 import testConnection from './commands/testConnection';
+import { LAST_SYNCED_KEY } from 'utils/constants';
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSyncSettings = {
@@ -51,11 +52,11 @@ export default class Awan extends Plugin {
 	settings!: AwanSettings;
 	localSettings!: AwanLocalSettings;
 	database!: Database;
-	syncStatus: SyncStatus = SyncStatus.UNINITIALIZED;
+	syncStatus: SyncStatus = SyncStatus.IDLE;
 	syncing: boolean = false;
 	lastSynced: number;
 	statusBarEl: HTMLElement;
-	statusIconEl: HTMLSpanElement;
+	statusIconEl: HTMLElement;
 	autoSyncIntervalId: number | undefined;
 
 	/** 
@@ -65,17 +66,19 @@ export default class Awan extends Plugin {
 		await this.loadSettings();
 		this.loadLocalSettings();
 		this.saveLocalSettings();
+		this.lastSynced = this.app.loadLocalStorage(LAST_SYNCED_KEY) as number;
 
 		this.database = new Database(this.app);
 
 		this.registerCommands();
-		this.registerStatusBar();
-
 		this.addSettingTab(new AwanSettingTab(this.app, this));
-		this.updateStatus();
-		this.registerEvents();
 
-		await this.updateAutoSync();
+		this.app.workspace.onLayoutReady(async () => {
+			this.registerStatusBar();
+			this.updateStatus();
+			this.registerEvents();
+			await this.updateAutoSync();
+		});
 
 		// TODO: Register protocol handler for importing config.
 		this.registerObsidianProtocolHandler(this.manifest.id, (data: ObsidianProtocolData) => this.onUriCall(data));
@@ -88,6 +91,8 @@ export default class Awan extends Plugin {
 		if (this.autoSyncIntervalId !== undefined) {
 			window.clearInterval(this.autoSyncIntervalId);
 		}
+
+		if (this.statusIconEl !== undefined) this.statusIconEl.remove();
 	}
 
 	async onExternalSettingsChange() {
@@ -196,16 +201,20 @@ export default class Awan extends Plugin {
 			const menu = new Menu();
 			menu.setUseNativeMenu(Awan.isProduction()); // NOTE: Temporary until mobile status bar.
 
-			if (this.syncStatus === SyncStatus.UNINITIALIZED) {
-				menu.addItem(item => item
-					.setDisabled(true)
-					.setIcon('circle-alert')
-					.setTitle(`${this.manifest.name}: ${this.syncStatus}`)
-				);
-			} else {
+			menu.addItem(item => {
+				return item
+					.setIsLabel(true)
+					.setSection('status')
+					.setTitle(`${this.manifest.name}: ${this.getCurrentStatusText()}`);
+			});
+
+			menu.addSeparator();
+
+			if (this.syncStatus !== SyncStatus.UNINITIALIZED) {
 				menu.addItem(item => item
 					.setTitle(this.localSettings.enabled ? 'Pause' : 'Resume')
 					.setIcon(this.localSettings.enabled ? 'circle-pause' : 'circle-play')
+					.setSection('action')
 					.onClick(async () => {
 						this.localSettings.enabled = !this.localSettings.enabled;
 						this.saveLocalSettings();
@@ -224,8 +233,29 @@ export default class Awan extends Plugin {
 
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass('mod-clickable');
-		const statusBarSegmentEl = this.statusBarEl.createEl('div', { cls: ['status-bar-item-segment'] });
-		this.statusIconEl = statusBarSegmentEl.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
+
+		if (Platform.isMobileApp || Platform.isMobile) {
+			// Create custom status icon like for mobile.
+			const rightSplit = this.app.workspace.rightSplit as WorkspaceMobileDrawer;
+			const root = rightSplit.getRoot() as WorkspaceItem & { headerEl?: HTMLElement };
+			const headerEl = root?.headerEl;
+
+			if (root && root?.headerEl) {
+				// Check if status icon already exists.
+				const existingIcon = headerEl?.querySelector('.awan-status-icon');
+				if (existingIcon) {
+					existingIcon.remove();
+				};
+
+				this.statusIconEl = root.headerEl.createEl('div', {
+					cls: ['clickable-icon', 'workspace-drawer-header-icon', 'mod-raised', 'awan-status-icon']
+				});
+				setIcon(this.statusIconEl, this.getCurrentStatusIcon());
+			}
+		} else {
+			this.statusIconEl = this.statusBarEl.createEl('div', { cls: ['status-bar-item-segment'] })
+				.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
+		}
 		this.statusIconEl.onClickEvent((ev: MouseEvent) => clickEvent(ev));
 	}
 
@@ -261,6 +291,7 @@ export default class Awan extends Plugin {
 				case SyncStatus.SUCCESS:
 					this.markIsSyncing(false);
 					this.lastSynced = moment.now();
+					this.app.saveLocalStorage(LAST_SYNCED_KEY, this.lastSynced);
 					break;
 				case SyncStatus.ERROR:
 					this.markIsSyncing(false);
@@ -295,9 +326,9 @@ export default class Awan extends Plugin {
 	private updateStatusBar() {
 		setTooltip(this.statusBarEl, this.syncStatus, { placement: "top" });
 		setIcon(this.statusIconEl, this.getCurrentStatusIcon());
-		this.setStatusBarIconColor(this.getCurrentStatusColor());
 
 		this.statusIconEl.toggleClass('animate-spin', this.syncStatus === SyncStatus.SYNCING);
+		this.setStatusBarIconColor(this.getCurrentStatusColor());
 	}
 
 	/**
@@ -326,6 +357,11 @@ export default class Awan extends Plugin {
 			case SyncStatus.ERROR: return 'warning';
 			default: return 'default';
 		}
+	}
+
+	/** Get status text for sync process. */
+	getCurrentStatusText(): string {
+		return !this.lastSynced ? 'Never synced' : moment(this.lastSynced).fromNow().toLocaleLowerCase();
 	}
 
 	/**

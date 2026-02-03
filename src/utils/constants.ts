@@ -1,3 +1,6 @@
+/** Local storage last synced key. */
+export const LAST_SYNCED_KEY = 'awan-last-synced';
+
 /** Default content type to use to upload file. */
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
