@@ -11,9 +11,9 @@ If your plugin does not need CSS, delete this file.
 	animation: spin 2s linear infinite;
 
 	@keyframes spin {
-	  to {
-		transform: rotate(360deg);
-	  }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 }
 
@@ -75,4 +75,20 @@ If your plugin does not need CSS, delete this file.
 	display: flex;
 	align-items: center;
 	cursor: var(--cursor);
+}
+
+.workspace-drawer-header-icon.awan-status-icon.mod-accent {
+	color: var(--text-accent);
+}
+
+.workspace-drawer-header-icon.awan-status-icon.mod-success {
+	color: var(--text-success);
+}
+
+.workspace-drawer-header-icon.awan-status-icon.mod-warning {
+	color: var(--text-warning);
+}
+
+.workspace-drawer-header-icon.awan-status-icon.mod-error {
+	color: var(--text-error);
 }

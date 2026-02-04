@@ -350,12 +350,13 @@ export default class Awan extends Plugin {
 	 * Get the color string representation for the current plugin status.
 	 * @returns A color string, used in conjunction with `mod-<color>` class.
 	 */
-	getCurrentStatusColor(): 'default' | 'success' | 'warning' {
+	getCurrentStatusColor(): 'default' | 'accent' | 'success' | 'warning' | 'error' {
 		switch (this.syncStatus) {
-			case SyncStatus.UNINITIALIZED: return 'warning';
+			case SyncStatus.UNINITIALIZED: return 'error';
 			case SyncStatus.SUCCESS: return 'success';
-			case SyncStatus.ERROR: return 'warning';
-			default: return 'default';
+			case SyncStatus.ERROR: return 'error';
+			case SyncStatus.SYNCING: return 'accent';
+			default: return 'accent';
 		}
 	}
 
@@ -369,21 +370,26 @@ export default class Awan extends Plugin {
 	 * 
 	 * @param color The color to be used. If omitted, reset the color to default.
 	 */
-	private setStatusBarIconColor(color?: 'default' | 'success' | 'warning') {
+	private setStatusBarIconColor(color?: 'default' | 'accent' | 'success' | 'warning' | 'error') {
 		switch (color) {
+			case 'accent':
+				this.statusIconEl.removeClasses(['mod-success', 'mod-warning', 'mod-error']);
+				this.statusIconEl.addClass('mod-accent');
+				break;
 			case 'success':
-				this.statusIconEl.removeClass('mod-warning');
+				this.statusIconEl.removeClasses(['mod-warning', 'mod-accent', 'mod-error']);
 				this.statusIconEl.addClass('mod-success');
 				break;
 			case 'warning':
-				this.statusIconEl.removeClass('mod-success');
+				this.statusIconEl.removeClasses(['mod-success', 'mod-accent', 'mod-error']);
 				this.statusIconEl.addClass('mod-warning');
 				break;
-			case 'default':
-				this.statusIconEl.removeClasses(['mod-success', 'mod-warning']);
+			case 'error':
+				this.statusIconEl.removeClasses(['mod-success', 'mod-accent', 'mod-warning']);
+				this.statusIconEl.addClass('mod-error');
 				break;
 			default:
-				this.statusIconEl.removeClasses(['mod-success', 'mod-warning']);
+				this.statusIconEl.removeClasses(['mod-success', 'mod-warning', 'mod-accent', 'mod-error']);
 				break;
 		}
 	}
