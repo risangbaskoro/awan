@@ -154,7 +154,10 @@ export class LocalFilesystem extends Filesystem {
         return await this.app.vault.adapter.rename(normalizePath(from), normalizePath(to));
     }
     async rm(key: string): Promise<void> {
-        await this.app.vault.adapter.trashSystem(normalizePath(key));
+        const abstractFile = this.app.vault.getAbstractFileByPath(key);
+        if (abstractFile) {
+            await this.app.fileManager.trashFile(abstractFile);
+        }
     }
     async testConnection(callback?: (err: unknown) => void): Promise<boolean> {
         return await this.commonTestConnectionOps(callback);
