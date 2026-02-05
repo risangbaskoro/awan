@@ -76,11 +76,12 @@ export class AwanSettingTab extends PluginSettingTab {
 
 		// Vault settings.
 		new VaultSyncSettingsGroup(containerEl, this.app, this.plugin)
-			.setHeading(`Vault configuration`);
+			.setHeading(`Vault configuration sync`);
 
+		// TODO: Move this settings group to a modal.
 		// Remote storage settings.
 		new S3SettingsGroup(containerEl, this.app, this.plugin)
-			.setHeading(`S3 configuration`);
+			.setHeading(`S3`);
 
 		// Debug settings group.
 		if (Awan.isDevelopment()) {
