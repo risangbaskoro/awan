@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs";
-import moment from "moment";
+import dayjs from "dayjs";
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill';
 
@@ -41,7 +41,7 @@ const copyManifest = {
 				copyFileSync(srcPath, destPath);
 			} else {
 				const manifest = JSON.parse(readFileSync(srcPath, { encoding: 'utf-8' }));
-				const suffix = moment().format('YYYYMMDD-hhmm');
+				const suffix = dayjs().format('YYYYMMDD-hhmm');
 				manifest.version = `${manifest.version}-dev-${suffix}`;
 				writeFileSync(destPath, JSON.stringify(manifest, null, '\t'), { encoding: 'utf-8' });
 			}
