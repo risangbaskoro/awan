@@ -51,13 +51,16 @@ const DEFAULT_AWAN_LOCAL_SETTINGS: Partial<AwanLocalSettings> = {
 export default class Awan extends Plugin {
 	settings!: AwanSettings;
 	localSettings!: AwanLocalSettings;
+
 	database!: Database;
-	syncStatus: SyncStatus = SyncStatus.IDLE;
-	syncing: boolean = false;
-	lastSynced: number;
-	statusBarEl: HTMLElement;
-	statusIconEl: HTMLElement;
-	autoSyncIntervalId: number | undefined;
+
+	private statusBarEl: HTMLElement;
+	private statusIconEl: HTMLElement;
+
+	private lastSynced: number;
+	private syncStatus: SyncStatus = SyncStatus.IDLE;
+	private syncing: boolean = false;
+	private syncIntervalId: number | undefined;
 
 	/** 
 	 * Setup when the plugin loads.
@@ -88,8 +91,8 @@ export default class Awan extends Plugin {
 	 * Teardown when the plugin unloads. 
 	 */
 	onunload() {
-		if (this.autoSyncIntervalId !== undefined) {
-			window.clearInterval(this.autoSyncIntervalId);
+		if (this.syncIntervalId !== undefined) {
+			window.clearInterval(this.syncIntervalId);
 		}
 
 		if (this.statusIconEl !== undefined) this.statusIconEl.remove();
@@ -103,13 +106,13 @@ export default class Awan extends Plugin {
 	async updateAutoSync() {
 		const { enabled, syncIntervalMs } = this.localSettings;
 
-		if (this.autoSyncIntervalId !== undefined) {
-			window.clearInterval(this.autoSyncIntervalId);
-			this.autoSyncIntervalId = undefined;
+		if (this.syncIntervalId !== undefined) {
+			window.clearInterval(this.syncIntervalId);
+			this.syncIntervalId = undefined;
 		}
 
 		if (enabled) {
-			this.autoSyncIntervalId = window.setInterval(() => {
+			this.syncIntervalId = window.setInterval(() => {
 				sync(this).catch((err) => {
 					console.error(`${this.manifest.id}: Sync failed.`, err);
 				});
