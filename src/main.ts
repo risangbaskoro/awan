@@ -1,5 +1,5 @@
 import { debounce, FileStats, Menu, moment, Platform, Plugin, setIcon, setTooltip, TAbstractFile, TFile, TFolder, WorkspaceItem, WorkspaceMobileDrawer } from 'obsidian';
-import { AwanSettings, Entity, FileType, SelectiveSyncSettings, SyncStatus, VaultSyncSettings } from './types';
+import { AwanSettings, ConflictAction, Entity, FileType, SelectiveSyncSettings, SyncStatus, VaultSyncSettings } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
 import { Database } from './database';
 import { AwanSettingTab } from 'settings';
@@ -20,6 +20,8 @@ const LAST_SYNCED_KEY = 'awan-last-synced';
 /** Local storage key for allowed file types. */
 const ALLOW_TYPES_KEY = 'awan-allow-types';
 
+/** Conflict action to use when conflict occurs. */
+const CONFLICT_ACTION_KEY = 'awan-conflict-action'
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSyncSettings = {
@@ -47,6 +49,7 @@ const DEFAULT_SELECTIVE_SYNC_SETTINGS: SelectiveSyncSettings = {
 const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
 	serviceType: 's3',
 	concurrency: 5,
+	conflictAction: 'merge',
 	vaultSyncSettings: DEFAULT_VAULT_SETTINGS,
 	selectiveSync: DEFAULT_SELECTIVE_SYNC_SETTINGS,
 	s3: DEFAULT_S3_CONFIG,
@@ -64,6 +67,8 @@ export default class Awan extends Plugin {
 
 	private allowSpecialFiles: Set<string>; // TODO: Change `T` type of `Set<T>`. Create a new type.
 	private allowTypes: Set<FileType>;
+
+	private conflictAction: ConflictAction;
 
 	private localFiles: Record<string, Entity>;
 
@@ -89,6 +94,8 @@ export default class Awan extends Plugin {
 			this.app.loadLocalStorage(ALLOW_TYPES_KEY) as FileType[]
 			?? ['image', 'audio', 'video', 'pdf']
 		);
+
+		this.conflictAction = this.app.loadLocalStorage(CONFLICT_ACTION_KEY) as ConflictAction ?? 'create_conflict_file';
 
 		this.localFiles = {};
 		await this.database.localFiles.iterate((value: Entity, key: string) => this.localFiles[key] = value);
@@ -193,6 +200,21 @@ export default class Awan extends Plugin {
 		}
 
 		return !this.lastSynced ? 'never synced' : moment(this.lastSynced).fromNow();
+	}
+
+	/**
+	 * Set the conflict action.
+	 */
+	setConflictAction(conflictAction: ConflictAction) {
+		this.conflictAction = conflictAction;
+		this.app.saveLocalStorage(CONFLICT_ACTION_KEY, conflictAction);
+	}
+
+	/**
+	 * Get the conflict action.
+	 */
+	getConflictAction(): ConflictAction {
+		return this.conflictAction ?? this.app.loadLocalStorage(CONFLICT_ACTION_KEY);
 	}
 
 	/**

@@ -20,6 +20,13 @@ export enum SyncStatus {
 export type SupportedServiceType = 's3';
 
 /**
+ * Conflict resolution strategy.
+ */
+export type ConflictAction =
+	| 'merge'
+	| 'create_conflict_file';
+
+/**
  * Entity is a file information.
  */
 export interface Entity extends FileStats {
@@ -51,7 +58,8 @@ export type SyncAction =
 	| 'delete_local'
 	| 'delete_remote'
 	| 'delete_previous_sync'
-	| 'conflict';
+	| 'merge'
+	| 'create_conflict_file';
 
 /** Settings enable sync vault settings. */
 export interface VaultSyncSettings {
@@ -97,6 +105,8 @@ export interface AwanSettings {
 	password: string;
 	/** Sync concurrency. */
 	concurrency: number;
+	/** Conflict resolution strategy. */
+	conflictAction: ConflictAction;
 	/** Settings enable sync vault settings. */
 	vaultSyncSettings: VaultSyncSettings;
 	/** Settings to select which files in the vault to be synced. */
