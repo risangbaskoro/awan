@@ -7,17 +7,16 @@ import Awan from "main";
 import { Notice } from "obsidian";
 import PQueue from "p-queue";
 import { MixedEntity, SyncStatus } from "types";
-import { fixTimeformat } from "utils/functions";
 
 export default async function sync(plugin: Awan) {
     // Abort if is currently syncing.
     if (plugin.syncing) {
-        new Notice(`Sync is currently running.`);
+        new Notice(`Sync is already running.`);
         return;
     }
 
     try {
-        plugin.updateStatus(SyncStatus.SYNCING);
+        plugin.setStatus(SyncStatus.SYNCING);
 
         // Step 1: Get remote entity list.
         const remoteFilesystem = new S3Filesystem(plugin.app, plugin.settings.s3);
@@ -51,11 +50,11 @@ export default async function sync(plugin: Awan) {
             localFilesystem,
         );
 
-        plugin.updateStatus(SyncStatus.SUCCESS);
+        plugin.setStatus(SyncStatus.SUCCESS);
     } catch (err) {
-        const resultNotice = new Notice(`Failed to sync. ${err as string}`);
+        const resultNotice = new Notice(`Failed to sync. Check your configuration or internet connection.`);
         resultNotice.containerEl.addClass('mod-warning');
-        plugin.updateStatus(SyncStatus.ERROR);
+        plugin.setStatus(SyncStatus.ERROR);
         throw err;
     }
 }
@@ -98,7 +97,7 @@ async function actualSync(
 
     // Control concurrency: 10 simultaneous S3 operations
     // TODO: Let the user choose concurrency in settings.
-    const queue = new PQueue({ concurrency: 10 });
+    const queue = new PQueue({ concurrency: plugin.settings.concurrency });
 
     // Queue all operations
     const promises = [...toCreate, ...toDelete].map(([key, mixedEntity]) =>
@@ -107,11 +106,13 @@ async function actualSync(
 
             // Base entity to store in database
             let entityToStore: Entity = {
+                mtime: 0,
+                ctime: 0,
+                size: 0,
+                synctime: 0,
+                folder: false,
                 ...previousSync,
                 key: mixedEntity.key,
-                keyRaw: mixedEntity.key,
-                size: 0,
-                sizeRaw: 0,
             }
 
             // Result from the filesystem operation
@@ -126,21 +127,21 @@ async function actualSync(
                             const result = await remoteFilesystem.write(
                                 mixedEntity.key,
                                 content,
-                                local!.clientMTime!,
-                                local!.clientCTime!
+                                local!.mtime,
+                                local!.ctime
                             );
                             operationResult = {
                                 ...result,
-                                clientCTime: local!.clientCTime,
-                                clientMTime: local!.clientMTime,
+                                ctime: local!.ctime,
+                                mtime: local!.mtime,
                             };
                         } else if (plugin.settings.s3.generateFolderObject) {
                             // Upload folder object (if enabled)
                             const result = await remoteFilesystem.mkdir(mixedEntity.key);
                             operationResult = {
-                                clientMTime: local!.clientMTime,
-                                serverMTime: result.serverMTime,
-                                synthesizedFolder: true,
+                                mtime: local!.mtime,
+                                synctime: result.synctime,
+                                folder: true,
                             };
                         }
                         break;
@@ -152,31 +153,32 @@ async function actualSync(
                             const result = await localFilesystem.write(
                                 mixedEntity.key,
                                 content,
-                                remote!.clientMTime!,
-                                remote!.clientCTime!
+                                remote!.mtime,
+                                remote!.ctime
                             );
                             operationResult = {
                                 ...remote,
-                                clientMTime: remote!.clientMTime,
-                                clientCTime: result.clientCTime,
+                                mtime: remote!.mtime,
+                                ctime: result.ctime,
                             }
                         } else {
-                            // Download folder (create local directory)
                             const result = await localFilesystem.mkdir(mixedEntity.key);
                             operationResult = {
-                                clientMTime: result.clientMTime,
-                                serverMTime: remote!.serverMTime,
-                                synthesizedFolder: true,
+                                mtime: result.mtime,
+                                synctime: remote!.synctime,
+                                folder: true,
                             }
                         }
                         break;
 
                     case 'delete_remote':
                         await remoteFilesystem.rm(mixedEntity.key);
+                        await plugin.database.previousSync.removeItem(key);
                         break;
 
                     case 'delete_local':
                         await localFilesystem.rm(mixedEntity.key);
+                        await plugin.database.previousSync.removeItem(key);
                         break;
 
                     case 'delete_previous_sync':
@@ -190,10 +192,10 @@ async function actualSync(
                 }
 
                 // Merge operation result into entity to store
-                entityToStore = fixTimeformat({
+                entityToStore = {
                     ...entityToStore,
                     ...operationResult,
-                });
+                };
 
                 // Only update database if operation produced results
                 if (Object.keys(operationResult).length) {
@@ -224,7 +226,6 @@ function buildMixedEntities(
 
     // Build for remote.
     for (let remoteEntity of remoteEntities) {
-        remoteEntity = fixTimeformat(remoteEntity);
         ensureEntityMTimeValidity(remoteEntity);
         const key = remoteEntity.key;
 
@@ -234,7 +235,6 @@ function buildMixedEntities(
 
     // Build for local.
     for (let localEntity of localEntities) {
-        localEntity = fixTimeformat(localEntity);
         ensureEntityMTimeValidity(localEntity);
         const key = localEntity.key;
 
@@ -244,7 +244,6 @@ function buildMixedEntities(
 
     // Build for previous sync.
     for (let previousSync of previousSyncEntities) {
-        previousSync = fixTimeformat(previousSync);
         ensureEntityMTimeValidity(previousSync);
         const key = previousSync.key;
 
@@ -330,9 +329,9 @@ function decideAction(key: string, mixedEntity: MixedEntity): MixedEntity {
         // Remote + previous, no local (deleted locally)
         if (hasChanged(remote!, previousSync!)) {
             // Remote was modified after we last synced, but local deleted it
-            // TODO: Current approach is pragmatic, download again.
+            // TODO: Current approach is pragmatic, but annoying for folders, download again.
             // TODO: Conflict action.
-            // TOdo: See https://help.obsidian.md/sync/troubleshoot#Conflict+resolution
+            // TODO: See https://help.obsidian.md/sync/troubleshoot#Conflict+resolution
             merge = { action: 'download', reason: "Remote modified but local deleted." };
         } else {
             // Remote unchanged since previous sync, safe to propagate deletion
@@ -388,7 +387,7 @@ function hasChanged(current: Entity, previous: Entity): boolean {
 
     // Modified time tolerance in seconds.
     const mTimeTolerance = 1000 * 2; // seconds
-    return Math.abs(current.clientMTime! - previous.clientMTime!) > mTimeTolerance;
+    return Math.abs(current.mtime - previous.mtime) > mTimeTolerance;
 }
 
 /**
@@ -402,7 +401,7 @@ function resolveConflict(
     // TODO: Other conflict algorithms.
     // TODO: See https://help.obsidian.md/sync/troubleshoot#How+Obsidian+Sync+handles+conflicts
     // Currently only supports last-modified-wins.
-    return local.clientMTime! > (remote.clientMTime ?? 3000) - 2000
+    return local.mtime > (remote.mtime ?? 3000) - 2000
         ? { action: 'upload', change: true, reason: "Local file is newer." }
         : { action: 'download', change: true, reason: "Remote file is newer." };
 }
@@ -420,8 +419,8 @@ function resolveConflict(
 function ensureEntityMTimeValidity(entity: Entity): Entity {
     if (
         !entity.key.endsWith("/") &&
-        entity.clientMTime === undefined &&
-        entity.serverMTime === undefined
+        entity.mtime === undefined &&
+        entity.synctime === undefined
     ) {
         throw Error(
             `Your file ${entity.key} has last modified time 0, don't know how to deal with it.`

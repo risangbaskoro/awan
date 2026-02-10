@@ -4,7 +4,7 @@ import { FileFilter } from "./abstract";
 export class VaultActiveCommunityPluginsFilter extends FileFilter {
     public evaluate(entity: Entity): boolean {
         const configDir = this.plugin.app.vault.configDir;
-        if (entity.keyRaw === `${configDir}/community-plugins.json`) {
+        if (entity.key === `${configDir}/community-plugins.json`) {
             return true;
         }
         return false;

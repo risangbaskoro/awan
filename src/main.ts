@@ -1,12 +1,25 @@
-import { Menu, Plugin, setIcon, setTooltip, moment, TAbstractFile, Notice, ObsidianProtocolData, IconName, Platform, WorkspaceMobileDrawer, WorkspaceItem } from 'obsidian';
-import { AwanSettingTab, } from './settings';
-import { AwanLocalSettings, AwanSettings, SelectiveSyncSettings, VaultSyncSettings } from './types';
-import { S3ConfigSchema, SyncStatus } from './types';
+import { debounce, FileStats, Menu, moment, Platform, Plugin, setIcon, setTooltip, TAbstractFile, TFile, TFolder, WorkspaceItem, WorkspaceMobileDrawer } from 'obsidian';
+import { AwanSettings, Entity, FileType, SelectiveSyncSettings, SyncStatus, VaultSyncSettings } from './types';
 import { DEFAULT_S3_CONFIG } from './filesystems/s3';
-import sync from './commands/sync';
 import { Database } from './database';
-import testConnection from './commands/testConnection';
-import { LAST_SYNCED_KEY } from 'utils/constants';
+import { AwanSettingTab } from 'settings';
+import sync from 'commands/sync';
+import testConnection from 'commands/testConnection';
+import { validateServiceSettings, getIconByStatus, setColor, getColorByStatus, toSentenceCase } from './utils/functions';
+
+
+/** Local storage key for pause state. */
+const PAUSED_KEY = 'awan-paused';
+
+/** Local storage key for interval timer in milliseconds. */
+const SYNC_INTERVAL_KEY = 'awan-sync-interval';
+
+/** Local storage key for last synced timestamp. */
+const LAST_SYNCED_KEY = 'awan-last-synced';
+
+/** Local storage key for allowed file types. */
+const ALLOW_TYPES_KEY = 'awan-allow-types';
+
 
 /** The default vault sync settings. */
 const DEFAULT_VAULT_SETTINGS: VaultSyncSettings = {
@@ -32,105 +45,211 @@ const DEFAULT_SELECTIVE_SYNC_SETTINGS: SelectiveSyncSettings = {
 
 /** The default Awan plugin settings. */
 const DEFAULT_AWAN_SETTINGS: Partial<AwanSettings> = {
-	password: '',
 	serviceType: 's3',
+	concurrency: 5,
 	vaultSyncSettings: DEFAULT_VAULT_SETTINGS,
 	selectiveSync: DEFAULT_SELECTIVE_SYNC_SETTINGS,
 	s3: DEFAULT_S3_CONFIG,
-}
-
-/** The default Awan local settings from local storage. */
-const DEFAULT_AWAN_LOCAL_SETTINGS: Partial<AwanLocalSettings> = {
-	enabled: true,
-	syncIntervalMs: 5 * 60000,
 }
 
 /** 
  * Awan plugin main class. 
  */
 export default class Awan extends Plugin {
-	settings!: AwanSettings;
-	localSettings!: AwanLocalSettings;
-
-	database!: Database;
+	settings: AwanSettings;
+	database: Database;
 
 	private statusBarEl: HTMLElement;
 	private statusIconEl: HTMLElement;
 
-	private lastSynced: number;
+	private allowSpecialFiles: Set<string>; // TODO: Change `T` type of `Set<T>`. Create a new type.
+	private allowTypes: Set<FileType>;
+
+	private localFiles: Record<string, Entity>;
+
+	private pause: boolean;
+	syncing: boolean = false;
 	private syncStatus: SyncStatus = SyncStatus.IDLE;
-	private syncing: boolean = false;
 	private syncIntervalId: number | undefined;
+	private syncIntervalMs: number | null = null;
+	private lastSynced: number | undefined;
 
 	/** 
 	 * Setup when the plugin loads.
 	 */
 	async onload() {
+		// Load settings.
 		await this.loadSettings();
-		this.loadLocalSettings();
-		this.saveLocalSettings();
-		this.lastSynced = this.app.loadLocalStorage(LAST_SYNCED_KEY) as number;
-
 		this.database = new Database(this.app);
+		this.pause = this.getPause();
+		this.syncIntervalMs = this.getSyncInterval();
+		this.lastSynced = this.app.loadLocalStorage(LAST_SYNCED_KEY) as number | undefined;
 
-		this.registerCommands();
+		this.allowTypes = new Set(
+			this.app.loadLocalStorage(ALLOW_TYPES_KEY) as FileType[]
+			?? ['image', 'audio', 'video', 'pdf']
+		);
+
+		this.localFiles = {};
+		await this.database.localFiles.iterate((value: Entity, key: string) => this.localFiles[key] = value);
+
 		this.addSettingTab(new AwanSettingTab(this.app, this));
 
 		this.app.workspace.onLayoutReady(async () => {
-			this.registerStatusBar();
-			this.updateStatus();
+			// Register commands.
+			this.registerCommands();
+			// Register status bar.
+			this._registerStatusBarItem();
+			// Register events for files.
 			this.registerEvents();
-			await this.updateAutoSync();
+			// Initiate the sync interval.
+			this.updateSyncInterval(this.syncIntervalMs);
 		});
-
-		// TODO: Register protocol handler for importing config.
-		this.registerObsidianProtocolHandler(this.manifest.id, (data: ObsidianProtocolData) => this.onUriCall(data));
 	}
 
 	/** 
 	 * Teardown when the plugin unloads. 
 	 */
 	onunload() {
-		if (this.syncIntervalId !== undefined) {
-			window.clearInterval(this.syncIntervalId);
-		}
-
+		// Remove status icon for mobile.
 		if (this.statusIconEl !== undefined) this.statusIconEl.remove();
-	}
 
-	async onExternalSettingsChange() {
-		await this.loadSettings();
-		new Notice(`${this.manifest.name} settings has been modified externally. Settings has been reloaded.`);
-	}
-
-	async updateAutoSync() {
-		const { enabled, syncIntervalMs } = this.localSettings;
-
-		if (this.syncIntervalId !== undefined) {
-			window.clearInterval(this.syncIntervalId);
-			this.syncIntervalId = undefined;
-		}
-
-		if (enabled) {
-			this.syncIntervalId = window.setInterval(() => {
-				sync(this).catch((err) => {
-					console.error(`${this.manifest.id}: Sync failed.`, err);
-				});
-			}, syncIntervalMs);
-		}
+		// Clear sync interval ID if any.
+		window.clearInterval(this.syncIntervalId);
 	}
 
 	/**
-	 * Register commands of the plugin.
+	 * Update the plugin's sync status.
 	 * 
-	 * @private
+	 * If undefined, the plugin will determine
+	 * between Unintialized, Unvalidated, or Idle
+	 * based on the configuration file.
+	 * 
+	 * @param status The sync status.
 	 */
+	setStatus(status?: SyncStatus) {
+		// Set status if defined.
+		if (status) {
+			this.syncStatus = status;
+			switch (status) {
+				case SyncStatus.UNINITIALIZED:
+					this.syncing = false;
+					break;
+				case SyncStatus.UNVALIDATED:
+					this.syncing = false;
+					break;
+				case SyncStatus.IDLE:
+					this.syncing = false;
+					break;
+				case SyncStatus.SYNCING:
+					this.syncing = true;
+					break;
+				case SyncStatus.SUCCESS:
+					this.syncing = false;
+					this.lastSynced = moment.now();
+					this.app.saveLocalStorage(LAST_SYNCED_KEY, this.lastSynced);
+					break;
+				case SyncStatus.ERROR:
+					this.syncing = false;
+					break;
+				default:
+					break;
+			}
+			this._updateStatusBar();
+			return;
+		}
+
+		// Check if the remote config is valid.
+		if (!validateServiceSettings(this.settings)) {
+			this.setStatus(SyncStatus.UNINITIALIZED);
+			return;
+		}
+
+		// Check if the remote config is not yet validated.
+		if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(this.syncStatus)) {
+			this.setStatus(SyncStatus.UNVALIDATED);
+			return;
+		}
+
+		this.setStatus(SyncStatus.IDLE);
+	}
+
+	/**
+	 * Get the plugin's sync status.
+	 */
+	getStatus(): SyncStatus {
+		return this.syncStatus;
+	}
+
+	/**
+	 * Get the plugin's sync status as text.
+	 */
+	getStatusText(): string {
+		if (!this.syncStatus && [
+			SyncStatus.UNINITIALIZED,
+			SyncStatus.UNVALIDATED
+		].contains(this.syncStatus)) {
+			return this.syncStatus;
+		}
+
+		return !this.lastSynced ? 'never synced' : moment(this.lastSynced).fromNow();
+	}
+
+	/**
+	 * Open the plugin settings.
+	 * 
+	 * This method calls the inner app setting object,
+	 * then open setting tab by ID of this plugin.
+	 */
+	openSettings() {
+		// Open the plugin settings tab using the app's internal API
+		// @ts-ignore
+		this.app.setting.open(); // eslint-disable-line
+		// @ts-ignore
+		this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
+	}
+
+	/**
+	 * Open the menu for status icon.
+	 */
+	openStatusIconMenu(ev: MouseEvent) {
+		const menu = new Menu();
+
+		menu.addItem(item => {
+			return item
+				.setIsLabel(true)
+				.setSection('status')
+				.setTitle(`${this.manifest.name}: ${toSentenceCase(this.getStatusText())}`);
+		});
+
+		menu.addSeparator();
+
+		if (this.syncStatus !== SyncStatus.UNINITIALIZED) {
+			menu.addItem(item => item
+				.setTitle(this.pause ? 'Resume' : 'Pause')
+				.setIcon(this.pause ? 'circle-play' : 'circle-pause')
+				.setSection('action')
+				.onClick(async () => {
+					this.setPause(!this.pause);
+				})
+			)
+		}
+
+		menu.addSeparator();
+		menu.addItem(item => item
+			.setTitle('Settings')
+			.setIcon('settings')
+			.onClick(() => this.openSettings())
+		);
+		menu.showAtMouseEvent(ev);
+	}
+
 	private registerCommands() {
 		this.addCommand({
 			id: `sync`,
 			name: `Sync`,
 			checkCallback: (checking: boolean) => {
-				if (this.validateServiceSettings()) {
+				if (validateServiceSettings(this.settings)) {
 					if (!checking) {
 						sync(this)
 							.catch(err => console.error(err));
@@ -145,7 +264,7 @@ export default class Awan extends Plugin {
 			id: `test`,
 			name: `Test connection`,
 			checkCallback: (checking: boolean) => {
-				if (this.validateServiceSettings()) {
+				if (validateServiceSettings(this.settings)) {
 					if (!checking) {
 						testConnection(this)
 							.catch(err => console.error(err));
@@ -160,80 +279,192 @@ export default class Awan extends Plugin {
 			id: `setup`,
 			name: `Set up sync`,
 			checkCallback: (checking: boolean) => {
-				if (this.validateServiceSettings()) return false;
-				if (!checking) this.openSettingsTab();
+				if (validateServiceSettings(this.settings)) return false;
+				if (!checking) this.openSettings();
 				return true;
 			}
 		});
 	}
 
-	/**
-	 * Register file events for this plugin
-	 */
 	private registerEvents() {
-		// Updates the status whenever a file is created, modified, renamed, or deleted.
-		const updateStatusCallback = () => {
-			if (this.syncStatus === SyncStatus.SYNCING) return;
-			if (this.syncStatus === SyncStatus.ERROR) return;
-			this.updateStatus();
-		};
-
-		this.registerEvent(this.app.vault.on('create', (file: TAbstractFile) => {
-			updateStatusCallback();
-		}));
-		this.registerEvent(this.app.vault.on('modify', (file: TAbstractFile) => {
-			updateStatusCallback();
-		}));
-		this.registerEvent(this.app.vault.on('rename', (file: TAbstractFile, _oldPath: string) => {
-			updateStatusCallback();
-		}));
-		this.registerEvent(this.app.vault.on('delete', (file: TAbstractFile) => {
-			updateStatusCallback();
-		}));
+		this.registerEvent(this.app.vault.on('create', async (file: TAbstractFile) => await this.onFileAdd(file)));
+		this.registerEvent(this.app.vault.on('delete', async (file: TAbstractFile) => await this.onFileRemove(file)));
+		this.registerEvent(this.app.vault.on('rename', async (file: TAbstractFile, oldPath) => await this.onFileRename(file, oldPath)));
+		this.registerEvent(this.app.vault.on('modify', async (file: TAbstractFile) => await this.onFileModify(file)));
 	}
 
 	/**
-	 * Register statusbar elemnt if not exists.
-	 * 
-	 * @private
+	 * Event to call on file add.
 	 */
-	private registerStatusBar() {
-		if (this.statusIconEl) return;
-
-		const clickEvent = (ev: MouseEvent) => {
-			const menu = new Menu();
-			menu.setUseNativeMenu(Awan.isProduction()); // NOTE: Temporary until mobile status bar.
-
-			menu.addItem(item => {
-				return item
-					.setIsLabel(true)
-					.setSection('status')
-					.setTitle(`${this.manifest.name}: ${this.getCurrentStatusText()}`);
-			});
-
-			menu.addSeparator();
-
-			if (this.syncStatus !== SyncStatus.UNINITIALIZED) {
-				menu.addItem(item => item
-					.setTitle(this.localSettings.enabled ? 'Pause' : 'Resume')
-					.setIcon(this.localSettings.enabled ? 'circle-pause' : 'circle-play')
-					.setSection('action')
-					.onClick(async () => {
-						this.localSettings.enabled = !this.localSettings.enabled;
-						this.saveLocalSettings();
-					})
-				)
-			}
-
-			menu.addSeparator();
-			menu.addItem(item => item
-				.setTitle('Settings')
-				.setIcon('settings')
-				.onClick(() => this.openSettingsTab())
-			);
-			menu.showAtMouseEvent(ev);
+	private async onFileAdd(file: TAbstractFile) {
+		let folder: boolean = false;
+		let stat: FileStats = {
+			ctime: 0,
+			mtime: 0,
+			size: 0
 		};
 
+		if (file instanceof TFile) stat = file.stat;
+		else if (file instanceof TFolder) folder = true;
+
+		const localFile = {
+			key: file.path,
+			...stat,
+			previouspath: "",
+			folder,
+			hash: "",
+			synchash: "",
+			synctime: 0
+		};
+		this.localFiles[file.path] = localFile;
+		await this.database.localFiles.setItem(file.path, localFile);
+	}
+
+	/**
+	 * Event to call on file remove.
+	 */
+	private async onFileRemove(file: TAbstractFile) {
+		delete this.localFiles[file.path];
+		await this.database.localFiles.removeItem(file.path);
+	}
+
+	/**
+	 * Event to call on file rename.
+	 */
+	private async onFileRename(file: TAbstractFile, previouspath: string) {
+		const localFile: Entity | undefined = this.localFiles[previouspath];
+		if (!localFile) return;
+
+		delete this.localFiles[previouspath];
+		await this.database.localFiles.removeItem(previouspath);
+		localFile.key = file.path;
+		// localFile.previouspath = previouspath;
+		this.localFiles[file.path] = localFile;
+		await this.database.localFiles.setItem(file.path, localFile);
+	}
+
+	/**
+	 * Event to call on file modification.
+	 */
+	private async onFileModify(file: TAbstractFile) {
+		if (file instanceof TFile) {
+			const localFile = { ...this.localFiles[file.path] as Entity, ...file.stat };
+			this.localFiles[file.path] = localFile;
+			await this.database.localFiles.setItem(file.path, localFile);
+		}
+	}
+
+	/** 
+	 * Set the plugin paused state. 
+	 */
+	setPause(pause: boolean) {
+		this.pause = pause;
+		this.app.saveLocalStorage(PAUSED_KEY, pause);
+	}
+
+	/**
+	 * Get the plugin paused state.
+	 */
+	getPause(): boolean {
+		return this.app.loadLocalStorage(PAUSED_KEY) as boolean;
+	}
+
+	/**
+	 * @param timeout Timeout to set the debouncer to, in milliseconds.
+	 * @returns Debounced function to call.
+	 */
+	requestUpdateSyncInterval(timeout: number = 2000) {
+		return debounce(() => {
+			this.updateSyncInterval(this.syncIntervalMs);
+		}, timeout);
+	}
+
+	/**
+	 * Set the interval to run auto syncing.
+	 * 
+	 * @param interval Sync interval, in milliseconds.
+	 */
+	private updateSyncInterval(interval: number | null) {
+		if (this.syncIntervalId !== undefined || !interval) {
+			window.clearInterval(this.syncIntervalId);
+			this.syncIntervalId = undefined;
+		};
+
+		const action = () => {
+			if (!this.pause) {
+				sync(this).catch((err) => {
+					console.error(`${this.manifest.id}: Sync failed.`, err);
+				});
+			}
+		};
+
+		if (interval) {
+			// Run once if the last time synced is outside the interval.
+			if (!this.syncing && (!this.lastSynced || (moment.now() - this.lastSynced) >= interval)) {
+				action();
+			}
+			this.syncIntervalId = window.setInterval(action, interval);
+		};
+	}
+
+	/**
+	 * Set the sync interval.
+	 * 
+	 * This function will not modify the {@link pause} state.
+	 * 
+	 * @param interval Sync interval, in milliseconds.
+	 */
+	setSyncInterval(interval: number | null) {
+		this.syncIntervalMs = interval;
+		this.app.saveLocalStorage(SYNC_INTERVAL_KEY, interval);
+	}
+
+	/**
+	 * Get the sync interval.
+	 * 
+	 * @returns Sync interval, in milliseconds.
+	 */
+	getSyncInterval(): number | null {
+		return this.app.loadLocalStorage(SYNC_INTERVAL_KEY) as number;
+	}
+
+	/**
+	 * Load settings from plugin's `data.json` file.
+	 */
+	async loadSettings() {
+		this.settings = Object.assign({}, DEFAULT_AWAN_SETTINGS, await this.loadData() as AwanSettings);
+	}
+
+	/**
+	 * Save settings to plugin's `data.json` file.
+	 */
+	async saveSettings() {
+		await this.saveData(this.settings);
+		this.setStatus();
+	}
+
+	/**
+	 * Update status bar.
+	 */
+	private _updateStatusBar() {
+		setIcon(this.statusIconEl, getIconByStatus(this.syncStatus));
+		setTooltip(this.statusBarEl, this.getStatusText(), { placement: 'top' });
+
+		this.statusIconEl.toggleClass('mod-spin', this.syncStatus === SyncStatus.SYNCING);
+		setColor(this.statusIconEl, getColorByStatus(this.syncStatus));
+
+		this.statusBarEl.onClickEvent((ev: MouseEvent) => {
+			this.openStatusIconMenu(ev);
+		});
+		this.statusIconEl.onClickEvent((ev: MouseEvent) => {
+			this.openStatusIconMenu(ev);
+		});
+	}
+
+	/**
+	 * Registers a new status bar item in Desktop and Mobile.
+	 */
+	private _registerStatusBarItem() {
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass('mod-clickable');
 
@@ -253,250 +484,11 @@ export default class Awan extends Plugin {
 				this.statusIconEl = root.headerEl.createEl('div', {
 					cls: ['clickable-icon', 'workspace-drawer-header-icon', 'mod-raised', 'awan-status-icon']
 				});
-				setIcon(this.statusIconEl, this.getCurrentStatusIcon());
 			}
 		} else {
 			this.statusIconEl = this.statusBarEl.createEl('div', { cls: ['status-bar-item-segment'] })
 				.createEl('span', { cls: ['status-bar-item-icon', 'awan-status-icon'] });
 		}
-		this.statusIconEl.onClickEvent((ev: MouseEvent) => clickEvent(ev));
-	}
-
-	/**
-	 * Mark the plugin as currently syncing.
-	 */
-	private markIsSyncing(isSyncing: boolean) {
-		this.syncing = isSyncing;
-	}
-
-	/**
-	 * Update the plugin status.
-	 * 
-	 * @param status The status of the plugin.
-	 */
-	updateStatus(status?: SyncStatus) {
-		// Set status if defined.
-		if (status) {
-			this.syncStatus = status;
-			switch (status) {
-				case SyncStatus.UNINITIALIZED:
-					this.markIsSyncing(false);
-					break;
-				case SyncStatus.UNVALIDATED:
-					this.markIsSyncing(false);
-					break;
-				case SyncStatus.IDLE:
-					this.markIsSyncing(false);
-					break;
-				case SyncStatus.SYNCING:
-					this.markIsSyncing(true);
-					break;
-				case SyncStatus.SUCCESS:
-					this.markIsSyncing(false);
-					this.lastSynced = moment.now();
-					this.app.saveLocalStorage(LAST_SYNCED_KEY, this.lastSynced);
-					break;
-				case SyncStatus.ERROR:
-					this.markIsSyncing(false);
-					break;
-				default:
-					break;
-			}
-			this.updateStatusBar();
-			return;
-		}
-
-		// Check if the remote config is valid.
-		if (!this.validateServiceSettings()) {
-			this.updateStatus(SyncStatus.UNINITIALIZED);
-			return;
-		}
-
-		// Check if the remote config is not yet validated.
-		if ([SyncStatus.UNINITIALIZED, SyncStatus.UNVALIDATED].contains(this.syncStatus)) {
-			this.updateStatus(SyncStatus.UNVALIDATED);
-			return;
-		}
-
-		this.updateStatus(SyncStatus.IDLE);
-	}
-
-	/**
-	 * Update status bar.
-	 * 
-	 * This function optionally register status bar if not exists.
-	 */
-	private updateStatusBar() {
-		setTooltip(this.statusBarEl, this.syncStatus, { placement: "top" });
-		setIcon(this.statusIconEl, this.getCurrentStatusIcon());
-
-		this.statusIconEl.toggleClass('animate-spin', this.syncStatus === SyncStatus.SYNCING);
-		this.setStatusBarIconColor(this.getCurrentStatusColor());
-	}
-
-	/**
-	 * Get the icon string representation for the current plugin status.
-	 * @returns A Lucide icon string.
-	 */
-	getCurrentStatusIcon(): IconName {
-		switch (this.syncStatus) {
-			case SyncStatus.UNINITIALIZED: return 'cloud-off';
-			case SyncStatus.IDLE: return 'cloud';
-			case SyncStatus.SYNCING: return 'refresh-cw';
-			case SyncStatus.SUCCESS: return 'cloud-check';
-			case SyncStatus.ERROR: return 'cloud-alert';
-			default: return 'cloud';
-		}
-	}
-
-	/**
-	 * Get the color string representation for the current plugin status.
-	 * @returns A color string, used in conjunction with `mod-<color>` class.
-	 */
-	getCurrentStatusColor(): 'default' | 'accent' | 'success' | 'warning' | 'error' {
-		switch (this.syncStatus) {
-			case SyncStatus.UNINITIALIZED: return 'error';
-			case SyncStatus.SUCCESS: return 'success';
-			case SyncStatus.ERROR: return 'error';
-			case SyncStatus.SYNCING: return 'accent';
-			default: return 'accent';
-		}
-	}
-
-	/** Get status text for sync process. */
-	getCurrentStatusText(): string {
-		return !this.lastSynced ? 'Never synced' : moment(this.lastSynced).fromNow().toLocaleLowerCase();
-	}
-
-	/**
-	 * Set the status bar icon color by adding or removing mod classes.
-	 * 
-	 * @param color The color to be used. If omitted, reset the color to default.
-	 */
-	private setStatusBarIconColor(color?: 'default' | 'accent' | 'success' | 'warning' | 'error') {
-		switch (color) {
-			case 'accent':
-				this.statusIconEl.removeClasses(['mod-success', 'mod-warning', 'mod-error']);
-				this.statusIconEl.addClass('mod-accent');
-				break;
-			case 'success':
-				this.statusIconEl.removeClasses(['mod-warning', 'mod-accent', 'mod-error']);
-				this.statusIconEl.addClass('mod-success');
-				break;
-			case 'warning':
-				this.statusIconEl.removeClasses(['mod-success', 'mod-accent', 'mod-error']);
-				this.statusIconEl.addClass('mod-warning');
-				break;
-			case 'error':
-				this.statusIconEl.removeClasses(['mod-success', 'mod-accent', 'mod-warning']);
-				this.statusIconEl.addClass('mod-error');
-				break;
-			default:
-				this.statusIconEl.removeClasses(['mod-success', 'mod-warning', 'mod-accent', 'mod-error']);
-				break;
-		}
-	}
-
-	/**
-	 * Open settings tab in Obsidian.
-	 * 
-	 * This function calls the inner app setting object,
-	 * then open setting tab by ID of this plugin.
-	 */
-	openSettingsTab() {
-		// Open the plugin settings tab using the app's internal API
-		// @ts-ignore
-		this.app.setting.open(); // eslint-disable-line
-		// @ts-ignore
-		this.app.setting.openTabById(this.manifest.id); // eslint-disable-line
-	}
-
-	/**
-	 * Check the validity of the service settings.
-	 * 
-	 * @returns True if the settings are valid.
-	 */
-	validateServiceSettings(): boolean {
-		// Check if initialized.
-		const serviceType = this.settings.serviceType;
-		const serviceSettings = this.settings[serviceType];
-
-		let schema;
-		switch (serviceType) {
-			case 's3': schema = S3ConfigSchema;
-				break;
-			default: schema = S3ConfigSchema;
-				break;
-		}
-
-		return schema.safeParse(serviceSettings).success
-	}
-
-	private onUriCall(data: ObsidianProtocolData) {
-		// The protocol data should contains `import` query string
-		// or ObsidianProtocolData
-		// Example URL
-		// {
-		// 	"action": "awan"
-		// 	"import": "xxx",
-		// 	"X-Amz-Credential": "xxx",
-		// 	"X-Amz-Date": "xxx",
-		// 	"X-Amz-Expires": "xxx",
-		// 	"X-Amz-SignedHeaders": "xxx",
-		// 	"X-Amz-Signature": "xxx",
-		// }
-		console.debug(JSON.stringify(data['import']));
-	}
-
-	/**
-	 * Load settings from plugin's `data.json` file.
-	 */
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_AWAN_SETTINGS, await this.loadData() as AwanSettings);
-	}
-
-	/**
-	 * Load local settings from local storage.
-	 */
-	loadLocalSettings() {
-		this.localSettings = Object.assign(
-			{},
-			DEFAULT_AWAN_LOCAL_SETTINGS,
-			this.app.loadLocalStorage(`${this.manifest.id}-settings`)
-		) as AwanLocalSettings;
-	}
-
-	/**
-	 * Save settings to plugin's `data.json` file.
-	 */
-	async saveSettings() {
-		await this.saveData(this.settings);
-		this.updateStatus();
-	}
-
-	saveLocalSettings() {
-		this.app.saveLocalStorage(`${this.manifest.id}-settings`, this.localSettings)
-	}
-
-	/**
-	 * Return string representation of the current environment.
-	 */
-	static environment(): string {
-		return process.env.NODE_ENV as string; // eslint-disable-line
-	}
-
-	/**
-	 * Determine if the plugin is in production mode.
-	 */
-	static isProduction(): boolean {
-		return this.environment() === "production";
-	}
-
-	/**
-	 * Determine if the plugin is in development mode.
-	 */
-	static isDevelopment(): boolean {
-		return !this.isProduction();
+		this._updateStatusBar();
 	}
 }
-

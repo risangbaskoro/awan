@@ -6,7 +6,7 @@ export class ImageFilter extends FileFilter {
     public evaluate(entity: Entity): boolean {
         if (IMAGE_EXTENSIONS.some((extension) => {
             extension = extension.startsWith('.') ? extension : `.${extension}`
-            return entity.keyRaw.endsWith(extension);
+            return entity.key.endsWith(extension);
         })) {
             return true;
         }

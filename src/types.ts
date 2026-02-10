@@ -1,4 +1,12 @@
+import { FileStats } from "obsidian";
 import { z } from "zod";
+
+export type FileType =
+	| 'image'
+	| 'audio'
+	| 'video'
+	| 'pdf'
+	| 'other';
 
 export enum SyncStatus {
 	UNINITIALIZED = 'Unintialized',
@@ -14,34 +22,23 @@ export type SupportedServiceType = 's3';
 /**
  * Entity is a file information.
  */
-export interface Entity {
-	/** Key regardless of encryption. */
-	key: string;
-	/** Original key. */
-	keyRaw: string;
-	/** Size regardelss of encryption. */
-	size: number;
-	/** Original size. */
-	sizeRaw: number;
-	/** Client creation time. */
-	clientCTime?: number;
-	/** Client modified time. */
-	clientMTime?: number;
-	/** Server modified time. */
-	serverMTime?: number;
-	/** Formatted client creation time. */
-	clientCTimeFormatted?: string;
-	/** Formatted client modified time. */
-	clientMTimeFormatted?: string;
-	/** Formatted server modified time. */
-	serverMTimeFormatted?: string;
-	/** Etag for S3 bucket. */
-	etag?: string;
-	/**
-	 * Determine if this entity is a synthesized folder.
-	 * Only used by S3.
+export interface Entity extends FileStats {
+	/** 
+	 * The object key. 
 	 */
-	synthesizedFolder?: boolean;
+	key: string;
+	/**
+	 * Determine if the entity is a folder.
+	 */
+	folder: boolean;
+	/**
+	 * Time of last synced in server time, represented as a unix timestamp, in milliseconds.
+	 */
+	synctime: number;
+	/** 
+	 * Etag for S3 bucket. 
+	 */
+	etag?: string;
 }
 
 /**
@@ -98,20 +95,14 @@ export interface AwanSettings {
 	serviceType: SupportedServiceType;
 	/** The key to password in Obsidian keychain for encryption. */
 	password: string;
+	/** Sync concurrency. */
+	concurrency: number;
 	/** Settings enable sync vault settings. */
 	vaultSyncSettings: VaultSyncSettings;
 	/** Settings to select which files in the vault to be synced. */
 	selectiveSync: SelectiveSyncSettings;
 	/** S3 configurations. */
 	s3: S3Config;
-}
-
-/** Settings that are stored locally using local storage. */
-export interface AwanLocalSettings {
-	/** Whether to enable scheduled sync. */
-	enabled?: boolean;
-	/* Sync interval in milliseconds. */
-	syncIntervalMs?: number;
 }
 
 /**

@@ -1,6 +1,3 @@
-/** Local storage last synced key. */
-export const LAST_SYNCED_KEY = 'awan-last-synced';
-
 /** Default content type to use to upload file. */
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
@@ -36,3 +33,23 @@ export const VIDEO_EXTENSIONS: string[] = [
     "mkv"
 ];
 
+/**
+ * Return string representation of the current environment.
+ */
+export const environment = (): string => {
+    return process.env.NODE_ENV as string; // eslint-disable-line
+}
+
+/**
+ * Determine if the current environment is in production mode.
+ */
+export const isProduction = (): boolean => {
+    return environment() === 'production';
+}
+
+/**
+ * Determine if the current environment is NOT in production mode.
+ */
+export const isDevelopment = (): boolean => {
+    return !isProduction();
+}

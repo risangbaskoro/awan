@@ -36,17 +36,17 @@ export class VaultCommunityPluginSettingsFilter extends FileFilter {
         const configDir = this.plugin.app.vault.configDir;
         const pluginsPrefix = `${configDir}/plugins/`;
 
-        return entity.keyRaw.startsWith(pluginsPrefix);
+        return entity.key.startsWith(pluginsPrefix);
     }
 
     protected isPluginDataFile(entity: Entity): boolean {
-        const basename = normalizePath(entity.keyRaw).split('/').pop() ?? "";
+        const basename = normalizePath(entity.key).split('/').pop() ?? "";
         return basename.endsWith('data.json');
     }
 
     private isOwnPlugin(entity: Entity): boolean {
         const configDir = this.plugin.app.vault.configDir;
         const ownPrefix = `${configDir}/plugins/${this.plugin.manifest.id}/`;
-        return entity.keyRaw.startsWith(ownPrefix);
+        return entity.key.startsWith(ownPrefix);
     }
 }

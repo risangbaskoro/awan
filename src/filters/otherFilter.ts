@@ -42,17 +42,17 @@ export class OtherFilter extends FileFilter {
     }
 
     private isObsidianFile(entity: Entity): boolean {
-        return entity.keyRaw.endsWith('.md') ||
-            entity.keyRaw.endsWith('.canvas') ||
-            entity.keyRaw.endsWith('.base');
+        return entity.key.endsWith('.md') ||
+            entity.key.endsWith('.canvas') ||
+            entity.key.endsWith('.base');
     }
 
     private isFolder(entity: Entity): boolean {
-        return entity.keyRaw.endsWith('/');
+        return entity.key.endsWith('/');
     }
 
     private isInVaultConfigDir(entity: Entity): boolean {
         const configDir = this.plugin.app.vault.configDir;
-        return entity.keyRaw.startsWith(configDir);
+        return entity.key.startsWith(configDir);
     }
 }

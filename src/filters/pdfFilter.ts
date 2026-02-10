@@ -3,7 +3,7 @@ import { FileFilter } from "./abstract";
 
 export class PdfFilter extends FileFilter {
     public evaluate(entity: Entity): boolean {
-        if (entity.keyRaw.endsWith('.pdf')) {
+        if (entity.key.endsWith('.pdf')) {
             return true;
         }
 

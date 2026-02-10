@@ -6,7 +6,7 @@ export class AudioFilter extends FileFilter {
     public evaluate(entity: Entity): boolean {
         if (AUDIO_EXTENSIONS.some((extension) => {
             extension = extension.startsWith('.') ? extension : `.${extension}`
-            return entity.keyRaw.endsWith(extension);
+            return entity.key.endsWith(extension);
         })) {
             return true;
         }

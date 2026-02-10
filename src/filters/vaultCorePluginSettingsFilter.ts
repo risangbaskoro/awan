@@ -24,8 +24,8 @@ export class VaultCorePluginSettingsFilter extends FileFilter {
 		const configDir = this.plugin.app.vault.configDir;
 
 		// Check if file is in the root of config dir
-		const lastSlashIndex = entity.keyRaw.lastIndexOf('/');
-		const directory = entity.keyRaw.substring(0, lastSlashIndex);
+		const lastSlashIndex = entity.key.lastIndexOf('/');
+		const directory = entity.key.substring(0, lastSlashIndex);
 
 		// If directory is NOT the config dir (meaning it's in a subdir), ignore it
 		if (directory !== configDir) {
@@ -33,12 +33,12 @@ export class VaultCorePluginSettingsFilter extends FileFilter {
 		}
 
 		// If it's one of the explicitly excluded files, ignore it (handled by other filters)
-		if (this.excludedFiles.has(entity.keyRaw)) {
+		if (this.excludedFiles.has(entity.key)) {
 			return false;
 		}
 
 		// If it is a JSON file, it's likely a core plugin setting
-		if (entity.keyRaw.endsWith('.json')) {
+		if (entity.key.endsWith('.json')) {
 			return true;
 		}
 

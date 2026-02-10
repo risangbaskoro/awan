@@ -5,7 +5,7 @@ export class VaultMainSettingsFilter extends FileFilter {
     public evaluate(entity: Entity): boolean {
         // We only care about app.json in the config dir
         const configDir = this.plugin.app.vault.configDir;
-        if (entity.keyRaw === `${configDir}/app.json`) {
+        if (entity.key === `${configDir}/app.json`) {
             return true;
         }
 

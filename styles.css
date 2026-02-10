@@ -7,7 +7,7 @@ If your plugin does not need CSS, delete this file.
 
 */
 
-.animate-spin {
+.mod-spin {
 	animation: spin 2s linear infinite;
 
 	@keyframes spin {
@@ -77,18 +77,18 @@ If your plugin does not need CSS, delete this file.
 	cursor: var(--cursor);
 }
 
-.workspace-drawer-header-icon.awan-status-icon.mod-accent {
-	color: var(--text-accent);
+.awan-status-icon.mod-accent {
+	color: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
 }
 
-.workspace-drawer-header-icon.awan-status-icon.mod-success {
-	color: var(--text-success);
+.awan-status-icon.mod-success {
+	color: var(--color-green);
 }
 
-.workspace-drawer-header-icon.awan-status-icon.mod-warning {
-	color: var(--text-warning);
+.awan-status-icon.mod-warning {
+	color: var(--color-yellow);
 }
 
-.workspace-drawer-header-icon.awan-status-icon.mod-error {
-	color: var(--text-error);
+.awan-status-icon.mod-error {
+	color: var(--color-red);
 }

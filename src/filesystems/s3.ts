@@ -19,13 +19,12 @@ import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { type HttpHandlerOptions } from "@smithy/types"
 import { buildQueryString } from "@smithy/querystring-builder"
 import { type S3Config } from "../types"
-import { DEFAULT_CONTENT_TYPE } from "../utils/constants";
+import { DEFAULT_CONTENT_TYPE, isDevelopment } from "../utils/constants";
 import PQueue from "p-queue";
 import { bufferToArrayBuffer, concatUint8Arrays, getDirectoryLevels } from "../utils/functions";
 import { Upload } from "@aws-sdk/lib-storage";
 // @ts-ignore
 import * as mime from "mime-types";
-import Awan from "main";
 
 
 export const DEFAULT_S3_CONFIG: S3Config = {
@@ -331,16 +330,13 @@ export class S3Filesystem extends Filesystem {
 				}
 				if (
 					!Object.prototype.hasOwnProperty.call(this.synthDirectoryCache, f) ||
-					remoteEntity.serverMTime! >= (this.synthDirectoryCache[f] as Entity).serverMTime!
+					remoteEntity.synctime >= (this.synthDirectoryCache[f] as Entity).synctime
 				) {
 					this.synthDirectoryCache[f] = {
 						key: f,
-						keyRaw: f,
 						size: 0,
-						serverMTime: remoteEntity.serverMTime,
-						serverMTimeFormatted: remoteEntity.serverMTimeFormatted,
-						clientMTime: remoteEntity.clientMTime,
-						clientMTimeFormatted: remoteEntity.clientMTimeFormatted,
+						synctime: remoteEntity.synctime,
+						mtime: remoteEntity.mtime,
 					} as Entity;
 				}
 			}
@@ -388,11 +384,9 @@ export class S3Filesystem extends Filesystem {
 		if (!generateFolderObject) {
 			const synth = {
 				key: key,
-				keyRaw: key,
 				size: 0,
-				sizeRaw: 0,
-				serverMTime: mtime,
-				clientMTime: mtime,
+				synctime: mtime,
+				mtime: mtime,
 			} as Entity;
 			this.synthDirectoryCache[key] = synth;
 			return synth;
@@ -503,7 +497,7 @@ export class S3Filesystem extends Filesystem {
 
 	async testConnection(callback?: (err: unknown) => void): Promise<boolean> {
 		try {
-			if (Awan.isDevelopment()) console.debug("Test connection: List objects command")
+			if (isDevelopment()) console.debug("Test connection: List objects command")
 			const command = {
 				Bucket: this.config.bucket,
 			} as ListObjectsV2CommandInput;
@@ -537,10 +531,10 @@ export class S3Filesystem extends Filesystem {
 			throw err;
 		}
 
-		if (Awan.isDevelopment()) console.debug("Test connection: Walk");
+		if (isDevelopment()) console.debug("Test connection: Walk");
 		await this.walk();
 
-		if (Awan.isDevelopment()) console.debug("Test connection: Walk partial");
+		if (isDevelopment()) console.debug("Test connection: Walk partial");
 		await this.walkPartial();
 
 		return await this.commonTestConnectionOps(callback);
@@ -617,10 +611,8 @@ function fromS3HeadObjectToEntity(
 
 	return {
 		key: key,
-		keyRaw: key,
-		serverMTime: serverMTime,
-		clientMTime: clientMTime,
-		sizeRaw: headObject.ContentLength,
+		synctime: serverMTime,
+		mtime: clientMTime,
 		size: headObject.ContentLength,
 		etag: headObject.ETag,
 	} as Entity;
@@ -649,10 +641,8 @@ function fromS3ObjectToEntity(
 
 	return {
 		key: key,
-		keyRaw: key,
-		serverMTime: serverMtime,
-		clientMTime: clientMtime,
-		sizeRaw: obj.Size!,
+		synctime: serverMtime,
+		mtime: clientMtime,
 		size: obj.Size!,
 		etag: obj.ETag!,
 	} as Entity;

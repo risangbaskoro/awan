@@ -7,19 +7,23 @@ export class Database {
     data: LocalForage;
     /** Stores previous sync records. */
     previousSync: LocalForage;
+    /** Stores local file changes. */
+    localFiles: LocalForage;
 
     constructor(private app: App) {
         const name = this.getName();
         const driver = localforage.INDEXEDDB;
 
         this.data = localforage.createInstance({
-            name, driver,
-            storeName: `data`,
+            name, driver, storeName: `data`,
         });
 
         this.previousSync = localforage.createInstance({
-            name, driver,
-            storeName: `previous-sync`,
+            name, driver, storeName: `previous-sync`,
+        });
+
+        this.localFiles = localforage.createInstance({
+            name, driver, storeName: `local-files`
         });
     }
 

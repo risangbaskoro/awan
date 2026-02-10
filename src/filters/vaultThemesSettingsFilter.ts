@@ -7,7 +7,7 @@ export class VaultThemesSettingsFilter extends FileFilter {
         const themesPrefix = `${configDir}/themes/`;
         const snippetsPrefix = `${configDir}/snippets/`;
 
-        if (entity.keyRaw.startsWith(themesPrefix) || entity.keyRaw.startsWith(snippetsPrefix)) {
+        if (entity.key.startsWith(themesPrefix) || entity.key.startsWith(snippetsPrefix)) {
             return true;
         }
         return false;
