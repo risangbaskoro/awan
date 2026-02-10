@@ -1,5 +1,5 @@
 import { Filesystem } from "filesystems/abstract";
-import { Entity } from "types";
+import { ConflictAction, Entity } from "types";
 import { LocalFilesystem } from "filesystems/local";
 import { S3Filesystem } from "filesystems/s3";
 import { FinalFileFilter } from "filters";
@@ -7,6 +7,7 @@ import Awan from "main";
 import { Notice } from "obsidian";
 import PQueue from "p-queue";
 import { MixedEntity, SyncStatus } from "types";
+import { generateConflictFileName, performMerge, resolveConflictAction } from "utils/conflict";
 
 export default async function sync(plugin: Awan) {
     // Abort if is currently syncing.
@@ -40,7 +41,7 @@ export default async function sync(plugin: Awan) {
         );
 
         // Step 5: Build sync plans.
-        mixedEntityMapping = computeSyncPlan(mixedEntityMapping);
+        mixedEntityMapping = computeSyncPlan(mixedEntityMapping, plugin.getConflictAction());
 
         // Step 6: Do the actual syncing.
         await actualSync(
@@ -84,10 +85,10 @@ async function actualSync(
 ) {
     // Separate by operation type for correct ordering
     const toCreate = Object.entries(entityMapping)
-        .filter(([_, e]) => ['upload', 'download'].contains(e.action ?? ""));
+        .filter(([_, e]) => ['upload', 'download', 'merge', 'create_conflict_file'].contains(e.action ?? ""));
 
     const toDelete = Object.entries(entityMapping)
-        .filter(([_, e]) => !['upload', 'download'].contains(e.action ?? ""));
+        .filter(([_, e]) => !['upload', 'download', 'merge', 'create_conflict_file'].contains(e.action ?? ""));
 
     // Sort creates: shallow → deep (parents first)
     toCreate.sort((a, b) => a[0].length - b[0].length);
@@ -98,6 +99,9 @@ async function actualSync(
     // Control concurrency: 10 simultaneous S3 operations
     // TODO: Let the user choose concurrency in settings.
     const queue = new PQueue({ concurrency: plugin.settings.concurrency });
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
     // Queue all operations
     const promises = [...toCreate, ...toDelete].map(([key, mixedEntity]) =>
@@ -170,6 +174,42 @@ async function actualSync(
                             }
                         }
                         break;
+
+                    case 'merge': {
+                        // TODO: Merge files using diff-match-patch
+                        break;
+                    }
+
+                    case 'create_conflict_file': {
+                        // 1. Download remote version
+                        const remoteContent = await remoteFilesystem.read(mixedEntity.key);
+
+                        // 2. Save remote version as conflict file locally
+                        const conflictFileName = generateConflictFileName(mixedEntity.key);
+                        await localFilesystem.write(
+                            conflictFileName,
+                            remoteContent,
+                            remote!.mtime,
+                            remote!.ctime
+                        );
+
+                        // 3. Upload local version to remote (local wins)
+                        const localContent = await localFilesystem.read(mixedEntity.key);
+                        const remoteResult = await remoteFilesystem.write(
+                            mixedEntity.key,
+                            localContent,
+                            local!.mtime,
+                            local!.ctime
+                        );
+
+                        // 4. Update database for the main file (not the conflict file yet)
+                        operationResult = {
+                            ...remoteResult,
+                            mtime: local!.mtime,
+                            ctime: local!.ctime,
+                        };
+                        break;
+                    }
 
                     case 'delete_remote':
                         await remoteFilesystem.rm(mixedEntity.key);
@@ -270,7 +310,7 @@ type SyncPlan = Record<string, MixedEntity>;
  * @param mixedEntities Mixed entities to convert to sync plans.
  * @returns Sync plans with changed, action, reason, etc.
  */
-function computeSyncPlan(mixedEntities: Record<string, MixedEntity>): SyncPlan {
+function computeSyncPlan(mixedEntities: Record<string, MixedEntity>, conflictAction: ConflictAction): SyncPlan {
     // Sort from deep path to short path.
     const sortedKeys = Object.keys(mixedEntities).sort(
         (k1, k2) => k2.length - k1.length
@@ -281,7 +321,7 @@ function computeSyncPlan(mixedEntities: Record<string, MixedEntity>): SyncPlan {
         const key = sortedKeys[idx]!;
         let entry = mixedEntities[key]!;
 
-        entry = decideAction(key, entry);
+        entry = decideAction(key, entry, conflictAction);
 
         mixedEntities[key] = entry;
     }
@@ -294,7 +334,7 @@ function computeSyncPlan(mixedEntities: Record<string, MixedEntity>): SyncPlan {
  * 
  * @returns Mixed entity with action to take and is changed.
  */
-function decideAction(key: string, mixedEntity: MixedEntity): MixedEntity {
+function decideAction(key: string, mixedEntity: MixedEntity, conflictAction: ConflictAction): MixedEntity {
     const { local, remote, previousSync } = mixedEntity;
     const exists = { local: !!local, remote: !!remote, previous: !!previousSync };
 
@@ -308,14 +348,14 @@ function decideAction(key: string, mixedEntity: MixedEntity): MixedEntity {
         merge = { action: 'upload', change: true, reason: "File does not exist remotely." };
     } else if (exists.local && exists.remote && !exists.previous) {
         // Both local and remote, no previous (conflict)
-        merge = resolveConflict(local!, remote!);
+        merge = resolveConflictAction(local!, remote!, conflictAction);
     } else if (!exists.local && !exists.remote && exists.previous) {
         // Only in previous, file has deleted remotely by other device and also locally.
         // Don't care about the op. Just delete from database.
         merge = { action: 'delete_previous_sync', reason: "Does not exists in local and remote." }
     } else if (exists.local && !exists.remote && exists.previous) {
         // Local + previous, no remote (deleted remotely)
-        if (hasChanged(local!, previousSync!)) {
+        if (hasChanged(local!, previousSync!) && !(local?.folder || remote?.folder || previousSync?.folder)) {
             // Local was modified, but remote deleted it - conflict
             // TODO: Current approach is pragmatic, upload again to remote.
             // TODO: Conflict action.
@@ -327,7 +367,7 @@ function decideAction(key: string, mixedEntity: MixedEntity): MixedEntity {
         }
     } else if (!exists.local && exists.remote && exists.previous) {
         // Remote + previous, no local (deleted locally)
-        if (hasChanged(remote!, previousSync!)) {
+        if (hasChanged(remote!, previousSync!) && !(local?.folder || remote?.folder || previousSync?.folder)) {
             // Remote was modified after we last synced, but local deleted it
             // TODO: Current approach is pragmatic, but annoying for folders, download again.
             // TODO: Conflict action.
@@ -339,7 +379,7 @@ function decideAction(key: string, mixedEntity: MixedEntity): MixedEntity {
         }
     } else if (exists.local && exists.remote && exists.previous) {
         // All three exist
-        merge = handleAllThree(local!, remote!, previousSync!);
+        merge = handleAllThree(local!, remote!, previousSync!, conflictAction);
     }
 
     return { ...mixedEntity, ...merge };
@@ -350,7 +390,7 @@ function decideAction(key: string, mixedEntity: MixedEntity): MixedEntity {
  * 
  * TODO: Docbloc.
  */
-function handleAllThree(local: Entity, remote: Entity, previous: Entity): Pick<MixedEntity, 'action' | 'change' | 'reason'> {
+function handleAllThree(local: Entity, remote: Entity, previous: Entity, conflictAction: ConflictAction): Pick<MixedEntity, 'action' | 'change' | 'reason'> {
     const localChanged = hasChanged(local, previous);
     const remoteChanged = hasChanged(remote, previous);
     if (!localChanged && !remoteChanged) {
@@ -366,7 +406,7 @@ function handleAllThree(local: Entity, remote: Entity, previous: Entity): Pick<M
         return { action: 'download', change: true, reason: "All three exists, remote changed." };
     }
     // Both changed - conflict
-    return resolveConflict(local, remote);
+    return resolveConflictAction(local, remote, conflictAction);
 }
 
 /**
@@ -388,22 +428,6 @@ function hasChanged(current: Entity, previous: Entity): boolean {
     // Modified time tolerance in seconds.
     const mTimeTolerance = 1000 * 2; // seconds
     return Math.abs(current.mtime - previous.mtime) > mTimeTolerance;
-}
-
-/**
- * Resolve conflict of two file changes.
- * Currently only supports last-modified-wins.
- */
-function resolveConflict(
-    local: Entity,
-    remote: Entity
-): Pick<MixedEntity, 'action' | 'change' | 'reason'> {
-    // TODO: Other conflict algorithms.
-    // TODO: See https://help.obsidian.md/sync/troubleshoot#How+Obsidian+Sync+handles+conflicts
-    // Currently only supports last-modified-wins.
-    return local.mtime > (remote.mtime ?? 3000) - 2000
-        ? { action: 'upload', change: true, reason: "Local file is newer." }
-        : { action: 'download', change: true, reason: "Remote file is newer." };
 }
 
 /**
