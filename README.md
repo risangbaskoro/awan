@@ -1,90 +1,145 @@
-# Obsidian Sample Plugin
+# Awan
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Awan is a synchronization plugin for [Obsidian](https://obsidian.md) that uses S3-compatible storage to keep your vaults in sync across devices. Own your data, control your costs, and sync on your terms.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- **Bring your own storage** — Use any S3-compatible provider (Amazon S3, Cloudflare R2, Backblaze B2, Wasabi, DigitalOcean Spaces, MinIO, etc.)
+- **Conflict resolution** — Automatically handles sync conflicts with *auto merge* or *create conflict files*.
+- **Selective sync** — Sync your Markdown files as well as image, audio, video, PDF, and other file types.
+- **Privacy-first** — Your credentials and data never touch Awan. Direct vault-to-S3 communication only.
+- **Lightweight** — Minimal UI, runs in background, native Obsidian styling.
 
-## First time developing plugins?
+## Quick Start
 
-Quick starting guide for new plugin devs:
+1. **Create an S3 bucket** with your preferred provider 
+	<!-- (see [Setup Guide](https://awan.risangbaskoro.com/setup) for provider-specific instructions) -->
+2. **Install Awan** (see Installation below) 
+3. **Configure credentials** in **Settings** → **Community plugins** → **Awan**, under **S3** settings group
+4. **Test connection** and start syncing
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
 
-## Releasing new releases
+> [!WARNING]
+> 
+> **Before using Awan, back up your vault completely**. If you are using Awan alongside other cloud storage provider, such as [Obsidian Sync](https://obsidian.md/sync), Dropbox, Google Drive, OneDrive, or iCloud Drive, please back up your Obsidian files to prevent sync conflicts. 
+> 
+> *Simultaneous syncing can cause data loss*.
+> 
+> See the official [Obsidian Help](https://help.obsidian.md/backup) for more information about ways of ways back up your vault.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+## Installation
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### From Community Plugins (Coming soon)
 
-## Adding your plugin to the community plugin list
+> [!WARNING] 
+> This method will be available when Obsidian team approve this plugin to be displayed in Community plugins.
+<!-- 
+1. Open Obsidian Settings → Community Plugins
+2. Disable Safe Mode if prompted
+3. Click Browse and search for "Awan"
+4. Click Install, then Enable 
+-->
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+### Using BRAT
 
-## How to use
+Requirement: Install BRAT from Community plugins.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+[Install with BRAT](obsidian://brat?plugin=risangbaskoro/awan)
 
-## Manually installing the plugin
+1. Open BRAT settings tab
+2. Click "Add beta plugin"
+3. Enter Awan's repository URL: `https://github.com/risangbaskoro/awan`
+4. Click "Add plugin"
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+> [!NOTE] 
+> Refer to [BRAT's documentation](https://tfthacker.com/brat-quick-guide#Adding+a+beta+plugin) for more in-depth guide.
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+### Manual Installation
 
-## Funding URL
+1. Download the latest release from [GitHub Releases](https://github.com/risangbaskoro/awan/releases)
+2. Extract `main.js`, `manifest.json`, and `styles.css` into `[your-vault]/.obsidian/plugins/awan/`
+3. Reload Obsidian
+4. Enable Awan in Settings → Community Plugins
 
-You can include funding URLs where people who use your plugin can financially support it.
+## Disclosures
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+- Awan is not an official sync plugin for Obsidian and is not related to [Obsidian Sync](https://obsidian.md/sync).
+- Awan requires you to set up your own S3-compatible storage.
+- Awan needs an internet access to upload to and download files from your S3-compatible storage.
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+## Comparison
 
-If you have multiple URLs, you can also do:
+| Feature                      | Awan                                  | Obsidian Sync                     | Remotely Save                                                      |
+| ---------------------------- | ------------------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| **Cost**                     | Your S3 costs (~$0.01-5/mo)           | $4-5/mo (Sync Standard)           | Your S3 costs + PRO cost for features                              |
+| **Storage limit**            | Your bucket size (unlimited)          | 1GB (Sync Standard)               | Your bucket size                                                   |
+| Maximum file size            | Unlimited                             | 5MB                               | Unlimited                                                          |
+| **Conflict resolution**      | Auto-merge or conflict files          | Automatic merge or conflict files | Last-modified or larger-size wins (free), Smart Conflict for PRO   |
+| **Security**                 | Keychain credential storage (1.11.0+) | End-to-end encrypted              | Plain text (opt-in obfuscation) in settings, stored in `data.json` |
+| **Data ownership**           | Full (your S3 bucket)                 | Encrypted on Obsidian servers     | Full (your storage)                                                |
+| **Setup complexity**         | Moderate (requires S3)                | Easy (zero config)                | Easy - moderate                                                    |
+| **Minimum Obsidian version** | 1.11.5                                | Any version                       | 0.12.15                                                            |
+| **Privacy**                  | Direct vault-to-S3                    | End-to-end encrypted              | Direct vault-to-storage                                            |
+| **Support**                  | Community (GitHub issues)             | Official Obsidian support         | Community                                                          |
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+### Choose Awan if:
 
-## API Documentation
+- You want **automatic conflict merging** without paying for Obsidian Sync
+- You value **enhanced credential security** (Keychain vs plain text)
+- You want full control over your data and storage provider
+- You're comfortable with S3 setup or want to learn
+- You want to minimize recurring costs
 
-See https://docs.obsidian.md
+### Choose Obsidian Sync if:
+
+- You want zero-configuration, officially supported sync
+- You're willing to pay for maximum convenience
+- You need guaranteed compatibility with all Obsidian features
+
+### Choose Remotely Save if:
+
+- You need Obsidian version older than 1.11.0
+- You prefer manual conflict resolution control
+
+## Security & Privacy
+
+### Your data stays yours
+
+- **No Awan servers**: Your vault syncs directly to your S3 bucket. Awan (the plugin) never sees your data.
+- **Credentials storage**: Stored locally in Obsidian's encrypted settings file on your device.
+- **Encryption**:
+    - In transit: TLS/HTTPS to your S3 endpoint
+    - At rest: Awan relies on S3 server-side encryption. Please refer to your provider's documentation.
+- **No telemetry**: Awan doesn't phone home, track usage, or collect analytics.
+
+### Recommendations
+
+- Use S3 bucket encryption (AES-256).
+- Enable bucket versioning for additional protection.
+- Restrict IAM/API token permissions to minimum required.
+- Don't share credentials or reuse them elsewhere.
+
+## Known Limitations
+
+- Large vaults may have slow initial sync.
+- Mobile sync requires app to be open.
+- No partial/differential sync yet; full file re-upload on change.
+- Symlinks not supported.
+
+## Credits
+
+Created by [@risangbaskoro](https://github.com/risangbaskoro). Inspired by Obsidian Sync and [Remotely Save](https://github.com/remotely-save/remotely-save).
+
+---
+
+**Disclaimer:** Awan is not affiliated with Obsidian or Obsidian Sync. It's an independent community plugin. Use at your own risk and always maintain backups.
+
+---
+
+## Support Development 
+
+Awan is free and open source. If it saves you money or makes your workflow better, consider supporting its development: 
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-pink?logo=github)](https://github.com/sponsors/risangbaskoro) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-yellow?logo=buymeacoffee)](https://buymeacoffee.com/baskoro)
+
+Every contribution helps maintain and improve Awan. Thank you! ❤️
