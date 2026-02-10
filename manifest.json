@@ -6,6 +6,9 @@
 	"description": "Synchronize your files using S3-compatible storage.",
 	"author": "@risangbaskoro",
 	"authorUrl": "https://x.com/risangbaskoro",
-	"fundingUrl": "https://github.com/sponsors/risangbaskoro",
+	"fundingUrl": {
+		"GitHub Sponsor": "https://github.com/sponsors/risangbaskoro",
+		"Buy Me a Coffee": "https://buymeacoffee.com/baskoro"
+	},
 	"isDesktopOnly": false
 }
