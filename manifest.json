@@ -3,7 +3,7 @@
 	"name": "Awan",
 	"version": "0.1.0",
 	"minAppVersion": "1.11.5",
-	"description": "Synchronize your files using S3-compatible storage.",
+	"description": "Sync your Obsidian notes and files using S3-compatible storage.",
 	"author": "@risangbaskoro",
 	"authorUrl": "https://x.com/risangbaskoro",
 	"fundingUrl": {
