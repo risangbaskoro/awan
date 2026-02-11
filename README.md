@@ -126,6 +126,10 @@ Requirement: Install BRAT from Community plugins.
 - No partial/differential sync yet; full file re-upload on change.
 - Symlinks not supported.
 
+## Security Vulnerability Reporting
+
+If you discover a security vulnerability in Awan, please review [Security Policy](SECURITY.md) for responsible disclosure guidelines. Please **do not** report security vulnerabilities through public GitHub issues.
+
 ## Credits
 
 Created by [@risangbaskoro](https://github.com/risangbaskoro). Inspired by Obsidian Sync and [Remotely Save](https://github.com/remotely-save/remotely-save).
