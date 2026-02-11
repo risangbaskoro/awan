@@ -373,6 +373,11 @@ export default class Awan extends Plugin {
 			const localFile = { ...this.localFiles[file.path] as Entity, ...file.stat };
 			this.localFiles[file.path] = localFile;
 			await this.database.localFiles.setItem(file.path, localFile);
+
+			if ((! await this.database.snapshots.getItem(file.path)) && file.path.endsWith('.md')) {
+				const content = await this.app.vault.readBinary(file);
+				await this.database.snapshots.setItem(file.path, content)
+			}
 		}
 	}
 

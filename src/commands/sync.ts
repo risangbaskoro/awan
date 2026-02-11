@@ -176,7 +176,43 @@ async function actualSync(
                         break;
 
                     case 'merge': {
-                        // TODO: Merge files using diff-match-patch
+                        const localBuffer = await localFilesystem.read(mixedEntity.key);
+                        const remoteBuffer = await remoteFilesystem.read(mixedEntity.key);
+                        const snapshotBuffer = await plugin.database.snapshots.getItem(mixedEntity.key) as ArrayBuffer;
+
+                        const localContent = decoder.decode(localBuffer);
+                        const remoteContent = decoder.decode(remoteBuffer);
+                        const snapshotContent = decoder.decode(snapshotBuffer);
+
+                        const { content: mergedContent } = performMerge(
+                            localContent,
+                            remoteContent,
+                            snapshotContent
+                        );
+
+                        const mergedBuffer = encoder.encode(mergedContent);
+
+                        // Write merged to local
+                        const localResult = await localFilesystem.write(
+                            mixedEntity.key,
+                            mergedBuffer.buffer,
+                            Date.now(),
+                            local!.ctime
+                        );
+
+                        // Upload merged to remote
+                        const remoteResult = await remoteFilesystem.write(
+                            mixedEntity.key,
+                            mergedBuffer.buffer,
+                            localResult.mtime,
+                            local!.ctime
+                        );
+
+                        operationResult = {
+                            ...remoteResult,
+                            mtime: localResult.mtime,
+                            ctime: localResult.ctime,
+                        };
                         break;
                     }
 
@@ -236,6 +272,8 @@ async function actualSync(
                     ...entityToStore,
                     ...operationResult,
                 };
+
+                await plugin.database.snapshots.removeItem(key);
 
                 // Only update database if operation produced results
                 if (Object.keys(operationResult).length) {

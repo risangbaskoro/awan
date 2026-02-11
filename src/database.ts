@@ -9,6 +9,8 @@ export class Database {
     previousSync: LocalForage;
     /** Stores local file changes. */
     localFiles: LocalForage;
+    /** Stores local file snapshots. */
+    snapshots: LocalForage;
 
     constructor(private app: App) {
         const name = this.getName();
@@ -24,6 +26,10 @@ export class Database {
 
         this.localFiles = localforage.createInstance({
             name, driver, storeName: `local-files`
+        });
+
+        this.snapshots = localforage.createInstance({
+            name, driver, storeName: `snapshots`,
         });
     }
 
