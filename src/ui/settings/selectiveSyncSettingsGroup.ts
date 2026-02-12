@@ -1,6 +1,6 @@
 import Awan from "main";
 import { App, SettingGroup } from "obsidian";
-import { ExcludedFoldersModal } from "ui/modals/excludedFolders";
+import { ExcludedFoldersModal } from "ui/modals/excludedFoldersModal";
 import { AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from "utils/constants";
 
 /**
