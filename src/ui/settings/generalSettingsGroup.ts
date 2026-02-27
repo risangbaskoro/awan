@@ -60,10 +60,8 @@ export class GeneralSettingsGroup extends SettingGroup {
                     .setName('Conflict resolution')
                     .setDesc('How to handle files that have changed both locally and remotely.')
                     .addDropdown(dropdown => dropdown
-                        .addOptions({
-                            'merge': 'Automatically merge',
-                            'create_conflict_file': 'Create conflict file',
-                        })
+                        .addOption('merge', 'Automatically merge')
+                        .addOption('create_conflict_file', 'Create conflict file')
                         .setValue(this.plugin.getConflictAction())
                         .onChange((value: ConflictAction) => {
                             this.plugin.setConflictAction(value);
