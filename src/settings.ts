@@ -3,7 +3,6 @@ import Awan from "./main";
 import { S3SettingsGroup } from "ui/settings/s3SettingsGroup";
 import { SelectiveSyncSettingsGroup } from "ui/settings/selectiveSyncSettingsGroup";
 import { VaultSyncSettingsGroup } from "ui/settings/vaultSyncSettingsGroup";
-import { DebugSettingsGroup } from "ui/settings/debugSettingsGroup";
 import { isDevelopment } from "utils/constants";
 import { AdvancedSettingsGroup } from "ui/settings/advancedSettingsGroup";
 import { GeneralSettingsGroup } from "ui/settings/generalSettingsGroup";
@@ -40,11 +39,5 @@ export class AwanSettingTab extends PluginSettingTab {
 		// Advanced settings.
 		new AdvancedSettingsGroup(containerEl, this.app, this.plugin)
 			.setHeading(`Advanced`);
-
-		// Debug settings group.
-		if (isDevelopment()) {
-			new DebugSettingsGroup(containerEl, this.app, this.plugin)
-				.setHeading(`Debug`);
-		}
 	}
 }

@@ -1,5 +1,5 @@
 import Awan from "main";
-import { App, SettingGroup } from "obsidian";
+import { App, Notice, SettingGroup } from "obsidian";
 
 export class AdvancedSettingsGroup extends SettingGroup {
     constructor(containerEl: HTMLElement, private app: App, private plugin: Awan) {
@@ -31,6 +31,23 @@ export class AdvancedSettingsGroup extends SettingGroup {
                         );
                 }
                 return settingReset();
+            })
+            .addSetting(setting => {
+                setting
+                    .setName(`Clear previous sync cache`)
+                    .setDesc(`Clearing the cache may break the sync algorithm and overwrite your files. Please use carefully.`)
+                    .addButton(button => button
+                        .setClass('mod-destructive')
+                        .setButtonText(`Clear`)
+                        .onClick(async () => {
+                            try {
+                                await this.plugin.database.previousSync.clear();
+                                new Notice(`Previous sync cached cleared.`);
+                            } catch (err) {
+                                const failedNotice = new Notice(`Failed to clear the previous sync cache. ${err}`);
+                                failedNotice.containerEl.addClass('mod-warning');
+                            }
+                        }))
             })
     }
 }
