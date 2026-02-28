@@ -273,8 +273,9 @@ export default class Awan extends Plugin {
 			checkCallback: (checking: boolean) => {
 				if (validateServiceSettings(this.settings)) {
 					if (!checking) {
-						sync(this)
-							.catch(err => console.error(err));
+						sync(this, 'manual').catch((err) => {
+							console.error(`${this.manifest.id}: Sync failed.`, err);
+						});
 					};
 					return true;
 				}
@@ -419,7 +420,7 @@ export default class Awan extends Plugin {
 
 		const action = () => {
 			if (!this.pause) {
-				sync(this).catch((err) => {
+				sync(this, 'auto').catch((err) => {
 					console.error(`${this.manifest.id}: Sync failed.`, err);
 				});
 			}

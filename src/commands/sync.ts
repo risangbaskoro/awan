@@ -9,10 +9,13 @@ import PQueue from "p-queue";
 import { MixedEntity, SyncStatus } from "types";
 import { generateConflictFileName, performMerge, resolveConflictAction } from "utils/conflict";
 
-export default async function sync(plugin: Awan) {
+type SyncTrigger = 'auto' | 'manual';
+
+export default async function sync(plugin: Awan, trigger: SyncTrigger) {
     // Abort if is currently syncing.
     if (plugin.syncing) {
-        new Notice(`Sync is already running.`);
+        if (trigger === 'manual')
+            new Notice(`Sync is already running.`);
         return;
     }
 
