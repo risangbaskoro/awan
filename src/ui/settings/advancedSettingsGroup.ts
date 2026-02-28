@@ -43,8 +43,8 @@ export class AdvancedSettingsGroup extends SettingGroup {
                             try {
                                 await this.plugin.database.previousSync.clear();
                                 new Notice(`Previous sync cached cleared.`);
-                            } catch (err) {
-                                const failedNotice = new Notice(`Failed to clear the previous sync cache. ${err}`);
+                            } catch {
+                                const failedNotice = new Notice(`Failed to clear the previous sync cache.`);
                                 failedNotice.containerEl.addClass('mod-warning');
                             }
                         }))
